@@ -49,8 +49,8 @@ char *ds_fmt_ratio(char *out, s32 value)
 
 char *ds_fmt_op(char *out, s32 value)
 {
-    u32 n = ((u32)value >> 8) & 0x7fu;
-    out[0] = (char)('1' + (n >> 5));
+    u32 n = (((u32)value >> 8) & 0x7fu) >> 3;
+    out[0] = (char)('1' + (n > 3u ? 3u : n));
     out[1] = 0;
     return out;
 }
@@ -157,7 +157,7 @@ static u32 ds_pitch_ratio(s32 track)
 
 static void ds_read_params(s32 track, struct ds_params *p)
 {
-    u32 v_ratio, v_index, v_attack, v_decay, v_feedback, v_tone;
+    u32 v_ratio, v_index, v_attack, v_decay, v_feedback, v_tone, v_op;
     u32 ratio = ds_pitch_ratio(track);
     u32 phase_inc = ratio >> 23;
     if (phase_inc < 8) phase_inc = 8;
@@ -177,7 +177,8 @@ static void ds_read_params(s32 track, struct ds_params *p)
     p->feedback = (u8)v_tone;           /* H: CHAR macro */
     p->tone = (u8)v_tone;               /* H: CHAR macro */
     p->velocity = (u8)(((u32)(u16)VEL(track) >> 8) & 0x7fu);
-    p->op_select = (u8)(ds_u7(track, P_SAMP) >> 5);
+    v_op = ds_u7(track, P_SAMP) >> 3;   /* D: OP, four positions */
+    p->op_select = (u8)(v_op > 3u ? 3u : v_op);
 }
 
 void ds_inject(void)

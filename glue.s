@@ -222,7 +222,17 @@ ds_knob_gfx:
         beq.s 2f
         cmpi.l #P_TUNE,%d0
         beq.s 2f
-        move.l #P_INDEX,%d0
+        cmpi.l #P_SAMP,%d0
+        bne.s 1f
+        move.l 12(%sp),%d0            | OP: four positions, as Sophie's MODEL
+        lsr.l #3,%d0
+        moveq #3,%d1
+        cmp.l %d1,%d0
+        bls.s 3f
+        move.l %d1,%d0
+3:      mulu.w #42,%d0
+        move.l %d0,12(%sp)
+1:      move.l #P_INDEX,%d0
         move.l %d0,8(%sp)
 2:      lea -20(%sp),%sp
         movem.l %d2-%d6,(%sp)
@@ -239,6 +249,21 @@ ds_ui_rec:
 1:      move.l 4(%sp),%d1
 2:      cmpi.l #164,%d1
         jmp 0x4006579e
+
+| Replaces SamplePageView's cmpi.l #135 (SAMP): Z=1 opens the sample list.
+        .globl ds_samp_chk0,ds_samp_chk2
+ds_samp_chk2:
+        move.l %d2,%d0
+ds_samp_chk0:
+        cmpi.l #P_SAMP,%d0
+        bne.s 9f
+        moveq #DS_ID,%d1
+        cmp.l ds_page_m,%d1
+        bne.s 8f
+        moveq #1,%d1
+        rts
+8:      moveq #0,%d1
+9:      rts
 
 | Range lookup is reached by display, stepper, setter and validator.
         .globl ds_prange,ds_prange_f
@@ -366,7 +391,7 @@ ds_short_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_index,ds_s_attac
 ds_long_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_index,ds_l_attack,ds_l_decay,ds_l_char
 ds_chooser_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_index,ds_l_attack,ds_l_decay,ds_l_char
 ds_overview_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_index,ds_s_attack,ds_s_decay,ds_s_char
-ds_range_tab: .long 0x7f00,0x0000,0x7f00,0x4000,0x7f00,0x0000,0x7f00,0x5000,0x7f00,0x1000,0x7f00,0x5000,0x7f00,0x4000
+ds_range_tab: .long 0x7f00,0x0000,0x7f00,0x4000,0x1f00,0x0000,0x7f00,0x5000,0x7f00,0x1000,0x7f00,0x5000,0x7f00,0x4000
 ds_s_tune: .asciz "TUNE"
 ds_s_algo: .asciz "ALGO"
 ds_s_ratio: .asciz "RATIO"

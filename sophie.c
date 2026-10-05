@@ -109,6 +109,11 @@ static const struct ds_algo ds_algo_table[8] = {
 	{3, 0, 0, 8192, 57344},  {2, 0, 0, 65535, 20480}
 };
 
+/* D (OP) should be immediately audible even before per-operator editing.
+ * These modest spreads avoid level jumps while changing FM colour. */
+static const uint16_t ds_op_ratio_mul_q15[4] = {32767, 24576, 40960, 57344};
+static const uint16_t ds_op_index_mul_q15[4] = {16384, 24576, 32767, 49152};
+
 void ds_voice_init(struct ds_voice *v)
 {
 	uint32_t i;
@@ -240,27 +245,28 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 
 			ratio_q12 = ds_ratio_q12(v->ratio_s[mod_op]);
 			ratio_q12 = (ratio_q12 * (int32_t)algo->ratio_mul_q15 + 16384) >> 15;
+			ratio_q12 = (ratio_q12 * (int32_t)ds_op_ratio_mul_q15[p->op_select & 3u] + 16384) >> 15;
 			if (ratio_q12 < 256) ratio_q12 = 256;
 			if (ratio_q12 > 32767) ratio_q12 = 32767;
 			feedback_amt = ds_mul(v->feedback_s[mod_op], v->feedback_s[mod_op]);
 			attack_step = ds_attack_step(v->attack_s[mod_op]);
 			decay_step = ds_decay_step(v->decay_s[mod_op]);
 			tone_rate = 1024 + ((v->tone_s * 14336) >> 15);
-		}
 
-		if (v->env_rise) {
-			v->op_env[mod_op] += attack_step;
-			if (v->op_env[mod_op] >= Q15) {
-				v->op_env[mod_op] = Q15;
-				v->env_rise = 0;
+			if (v->env_rise) {
+				v->op_env[mod_op] += attack_step;
+				if (v->op_env[mod_op] >= Q15) {
+					v->op_env[mod_op] = Q15;
+					v->env_rise = 0;
+				}
+			} else if (v->op_env[mod_op] > 0) {
+				v->op_env[mod_op] -= decay_step;
+				if (v->op_env[mod_op] < 0) v->op_env[mod_op] = 0;
 			}
-		} else if (v->op_env[mod_op] > 0) {
-			v->op_env[mod_op] -= decay_step;
-			if (v->op_env[mod_op] < 0) v->op_env[mod_op] = 0;
-		}
-		if (v->amp_env > 0) {
-			v->amp_env -= (v->amp_env * 14 + 32767) >> 15;
-			if (v->amp_env < 0) v->amp_env = 0;
+			if (v->amp_env > 0) {
+				v->amp_env -= (v->amp_env * 14 + 32767) >> 15;
+				if (v->amp_env < 0) v->amp_env = 0;
+			}
 		}
 
 		{
@@ -286,7 +292,8 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 			mod = ds_sin(v->phase[mod_op] + ds_phase_from_radians_q15(fb));
 
 			index_q12 = (v->index_s[mod_op] * (int32_t)algo->index_mul_q15 + 16384) >> 15;
-			index_q12 = (index_q12 * (1024 + ((v->op_env[mod_op] * 7168) >> 15))) >> 15;
+			index_q12 = (index_q12 * (int32_t)ds_op_index_mul_q15[p->op_select & 3u] + 16384) >> 15;
+			index_q12 = (index_q12 * (512 + ((v->op_env[mod_op] * 24064) >> 15))) >> 15;
 			phase_mod = ds_index_phase(index_q12, mod, Q15);
 
 			car = ds_sin(v->phase[carrier_op] + phase_mod);
