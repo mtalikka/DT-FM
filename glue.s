@@ -1,5 +1,5 @@
 | SPDX-License-Identifier: MIT
-| Sophie custom machine registration and post-playback render hook.
+| FM2OP custom machine registration and post-playback render hook.
         .section .run, "ax"
         .globl ds_inject_s
 ds_inject_s:
@@ -16,8 +16,8 @@ ds_inject_s:
         .globl ds_machine
 ds_machine:
         .long   7, ds_name, ds_short, ds_icon_bmp, 3, 7
-ds_name: .asciz "SOPHIE"
-ds_short: .asciz "SOPH"
+ds_name: .asciz "FM2OP"
+ds_short: .asciz "FM2"
         .balign 4
 ds_icon_bmp:
         .long BMP_VT, 11, 7, 1, ds_icon_px, ds_icon_mask, 0
@@ -30,18 +30,18 @@ ds_icon_mask:
         .long 0xfe000000,0xfe000000,0xfe000000,0x00000000
         .long 0x00000000,0x00000000,0x00000000
 
-| Dedicated SOPHIE SRC layout and presentation.  All eight controls retain
+| Dedicated FM2OP SRC layout and presentation.  All eight controls retain
 | SLICE's persistent storage slots, preserving locks and external control.
         .equ DS_ID,7
         .equ LAY_SLICE,0x4197cf5c
         .equ P_TUNE,0x84
-        .equ P_MODEL,0x85
-        .equ P_BR,0x86
+        .equ P_RATIO,0x85
+        .equ P_INDEX,0x86
         .equ P_SAMP,0x87
-        .equ P_SWEEP,0x88
-        .equ P_METAL,0x89
+        .equ P_ATTACK,0x88
+        .equ P_DECAY,0x89
         .equ P_FEEDBACK,0x8a
-        .equ P_COLOR,0x8b
+        .equ P_TONE,0x8b
         .section .bss,"aw"
         .balign 4
         .globl ds_page_m
@@ -169,7 +169,7 @@ ds_lfo_overview_group:
         bne.s 1f
         cmpi.l #P_TUNE,%d3
         bcs.s 1f
-        cmpi.l #P_COLOR,%d3
+        cmpi.l #P_TONE,%d3
         bhi.s 1f
         move.l #ds_short,%d0
         bra.s 2f
@@ -209,10 +209,8 @@ ds_is_control:
         bne.s 8f
         cmpi.l #P_TUNE,%d0
         bcs.s 8f
-        cmpi.l #P_COLOR,%d0
+        cmpi.l #P_TONE,%d0
         bhi.s 8f
-        cmpi.l #P_BR,%d0
-        beq.s 8f
         cmpi.l #P_SAMP,%d0
         beq.s 8f
         moveq #1,%d1
@@ -226,20 +224,7 @@ ds_knob_gfx:
         beq.s 2f
         cmpi.l #P_TUNE,%d0
         beq.s 2f
-        cmpi.l #P_MODEL,%d0
-        beq.s 5f
-        cmpi.l #P_SWEEP,%d0
-        beq.s 3f
-1:      move.l #P_BR,%d0
-        bra.s 4f
-3:      move.l #P_TUNE,%d0
-        bra.s 4f
-5:      move.l 12(%sp),%d0
-        lsr.l #3,%d0
-        mulu.w #42,%d0
-        move.l %d0,12(%sp)
-        move.l #P_BR,%d0              | ordinary four-position knob
-4:
+        move.l #P_INDEX,%d0
         move.l %d0,8(%sp)
 2:      lea -20(%sp),%sp
         movem.l %d2-%d6,(%sp)
@@ -251,15 +236,7 @@ ds_ui_rec:
         beq.s 1f
         cmpi.l #P_TUNE,%d0
         beq.s 1f
-        cmpi.l #P_MODEL,%d0
-        beq.s 4f
-        cmpi.l #P_SWEEP,%d0
-        beq.s 3f
-        move.l #P_BR,%d1
-        bra.s 2f
-3:      move.l #P_TUNE,%d1
-        bra.s 2f
-4:      move.l #P_BR,%d1              | ordinary four-position knob
+        move.l #P_INDEX,%d1
         bra.s 2f
 1:      move.l 4(%sp),%d1
 2:      cmpi.l #164,%d1
@@ -280,12 +257,10 @@ ds_prange_f:
         movea.l (%sp)+,%a0
         movea.l (%sp)+,%a1
         move.l 4(%sp),%d1
-        cmpi.l #P_MODEL,%d1
+        cmpi.l #P_RATIO,%d1
         bcs.s 9f
-        cmpi.l #P_COLOR,%d1
+        cmpi.l #P_TONE,%d1
         bhi.s 9f
-        cmpi.l #P_BR,%d1
-        beq.s 9f
         move.l (%a1),%d0
         cmpi.l #0x4017eb58,%d0
         bne.s 9f
@@ -300,10 +275,10 @@ ds_prange_f:
         bne.s 9f
         cmpi.l #P_SAMP,%d1
         bne.s 8f
-        clr.l 8(%a0)                   | new Sophie sounds start at SAMP 0
+        clr.l 8(%a0)                   | new FM2OP sounds start at SAMP 0
         bra.s 9f
 8:
-        subi.l #P_MODEL,%d1
+        subi.l #P_RATIO,%d1
         lsl.l #3,%d1
         lea ds_range_tab,%a1
         clr.l (%a0)
@@ -317,22 +292,24 @@ ds_prange_f:
         .globl ds_val_text,ds_pop_text
 ds_val_text:
         move.l 8(%sp),%d0
-        cmpi.l #P_MODEL,%d0
+        cmpi.l #P_RATIO,%d0
         beq.s 2f
-        cmpi.l #P_SWEEP,%d0
+        cmpi.l #P_ATTACK,%d0
         beq.s 4f
-        cmpi.l #P_COLOR,%d0
+        cmpi.l #P_DECAY,%d0
+        beq.s 4f
+        cmpi.l #P_INDEX,%d0
         beq.s 5f
         cmpi.l #P_FEEDBACK,%d0
         beq.s 5f
-        cmpi.l #P_METAL,%d0
+        cmpi.l #P_TONE,%d0
         bne.s 1f
 5:      move.l #ds_fmt_u7,%a0
         bra.s 3f
 4:
-        move.l #ds_fmt_sweep,%a0
+        move.l #ds_fmt_time,%a0
         bra.s 3f
-2:      move.l #ds_fmt_model,%a0
+2:      move.l #ds_fmt_ratio,%a0
 3:
         moveq #DS_ID,%d1
         cmp.l ds_page_m,%d1
@@ -347,22 +324,24 @@ ds_val_text:
         jmp 0x4000f32c
 ds_pop_text:
         move.l 4(%sp),%d0
-        cmpi.l #P_MODEL,%d0
+        cmpi.l #P_RATIO,%d0
         beq.s 2f
-        cmpi.l #P_SWEEP,%d0
+        cmpi.l #P_ATTACK,%d0
         beq.s 4f
-        cmpi.l #P_COLOR,%d0
+        cmpi.l #P_DECAY,%d0
+        beq.s 4f
+        cmpi.l #P_INDEX,%d0
         beq.s 5f
         cmpi.l #P_FEEDBACK,%d0
         beq.s 5f
-        cmpi.l #P_METAL,%d0
+        cmpi.l #P_TONE,%d0
         bne.s 1f
 5:      move.l #ds_fmt_u7,%a0
         bra.s 3f
 4:
-        move.l #ds_fmt_sweep,%a0
+        move.l #ds_fmt_time,%a0
         bra.s 3f
-2:      move.l #ds_fmt_model,%a0
+2:      move.l #ds_fmt_ratio,%a0
 3:
         moveq #DS_ID,%d1
         cmp.l ds_page_m,%d1
@@ -376,23 +355,23 @@ ds_pop_text:
         cmpi.l #164,%d1
         jmp 0x400657f8
         .balign 4
-ds_short_tab: .long ds_s_tune,ds_s_model,ds_s_fold,0,ds_s_sweep,ds_s_metal,ds_s_feedback,ds_s_color
-ds_long_tab: .long ds_l_tune,ds_l_model,ds_l_fold,0,ds_l_sweep,ds_l_metal,ds_l_feedback,ds_l_color
-ds_chooser_tab: .long ds_l_tune,ds_l_model,ds_l_fold,0x401ccabe,ds_l_sweep,ds_l_metal,ds_l_feedback,ds_l_color
-ds_overview_tab: .long ds_s_tune,ds_s_model,ds_s_fold,ds_s_samp,ds_s_sweep,ds_s_metal,ds_s_feedback,ds_s_color
-ds_range_tab: .long 0x1f00,0x0000,0x7f00,0x4000,0x7f00,0x2800,0x7f00,0x4000,0x7f00,0x2800,0x7f00,0x2000,0x7f00,0x4000
+ds_short_tab: .long ds_s_tune,ds_s_ratio,ds_s_index,0,ds_s_attack,ds_s_decay,ds_s_feedback,ds_s_tone
+ds_long_tab: .long ds_l_tune,ds_l_ratio,ds_l_index,0,ds_l_attack,ds_l_decay,ds_l_feedback,ds_l_tone
+ds_chooser_tab: .long ds_l_tune,ds_l_ratio,ds_l_index,0x401ccabe,ds_l_attack,ds_l_decay,ds_l_feedback,ds_l_tone
+ds_overview_tab: .long ds_s_tune,ds_s_ratio,ds_s_index,ds_s_samp,ds_s_attack,ds_s_decay,ds_s_feedback,ds_s_tone
+ds_range_tab: .long 0x7f00,0x3000,0x7f00,0x4000,0x7f00,0x0000,0x7f00,0x1000,0x7f00,0x5000,0x7f00,0x2800,0x7f00,0x4000
 ds_s_tune: .asciz "TUNE"
-ds_s_model: .asciz "MODEL"
-ds_s_fold: .asciz "FOLD"
+ds_s_ratio: .asciz "RATIO"
+ds_s_index: .asciz "INDEX"
 ds_s_samp: .asciz "SAMP"
-ds_s_color: .asciz "COLOR"
-ds_s_metal: .asciz "METAL"
-ds_s_sweep: .asciz "SWEEP"
+ds_s_tone: .asciz "TONE"
+ds_s_decay: .asciz "DECAY"
+ds_s_attack: .asciz "ATTK"
 ds_s_feedback: .asciz "FBK"
 ds_l_tune: .asciz "Tune"
-ds_l_model: .asciz "Model"
-ds_l_fold: .asciz "Fold"
-ds_l_color: .asciz "Color"
-ds_l_metal: .asciz "Metal"
-ds_l_sweep: .asciz "Sweep"
+ds_l_ratio: .asciz "Ratio"
+ds_l_index: .asciz "Index"
+ds_l_tone: .asciz "Tone"
+ds_l_decay: .asciz "Decay"
+ds_l_attack: .asciz "Attack"
 ds_l_feedback: .asciz "Feedback"

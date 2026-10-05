@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build the S033 Sophie release without redistributing firmware.
+# Build the S034 FM2OP release without redistributing firmware.
 set -eu
 
 if [ "$#" -ne 2 ]; then
@@ -28,9 +28,9 @@ cd "$loader"
 "$python" -m elekloader.lint --stock "$stock" \
     "$loader/mods/core/out/core-2.1.elemod" \
     "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" \
-    "$project/out/digisophie-1.1.13.elemod"
+    "$project/out/digisophie-2.0.0.elemod"
 "$python" -m elekloader.patch --stock "$stock" \
     --mod "$loader/mods/core/out/core-2.1.elemod" \
     --mod "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" \
-    --mod "$project/out/digisophie-1.1.13.elemod" \
-    --out "$project/out/Digitakt_OS1.53_SOPHIE_S033.syx" --version S033
+    --mod "$project/out/digisophie-2.0.0.elemod" \
+    --out "$project/out/Digitakt_OS1.53_FM2OP_S034.syx" --version S034

@@ -1,19 +1,14 @@
-# Sophie for Digitakt
+# FM2OP for Digitakt
 
-Sophie is a metallic percussion synth machine for the original Digitakt
-(Mk1), OS 1.53. It began as a fixed-point adaptation of
-[Sophie for Schwung](https://github.com/mestela/schwung-sophie) by [mestela](https://github.com/mestela) and evolved
-into four different models: FUSE, BOOM, PIPE
-and SHARD. It uses Digitakt's regular AMP,
+FM2OP is a two-operator FM synth machine for the original Digitakt
+(Mk1), OS 1.53. It replaces the previous Sophie-centric voice model with
+a dedicated carrier/modulator engine and keeps Digitakt's regular AMP,
 filter, mixer and effects path. The source, not a modified Elektron OS,
 is what this repository distributes.
 
 ## Changelog
 
-- **S031:** BR is replaced with Sophie’s FOLD wavefolder.
-
-Get the current `.elemod` and release notes from the
-[v1.1.13 release](https://github.com/soejrd/digisophie/releases/tag/v1.1.13).
+- **S034:** Replaced the Sophie voice code with a dedicated 2-op FM machine.
 
 ---
 
@@ -28,13 +23,13 @@ operation is **not** claimed.
 | SRC knob | Control | What it does |
 | --- | --- | --- |
 | A | TUNE | Pitch |
-| B | MODEL | FUSE / BOOM / PIPE / SHARD |
-| C | FOLD | Sophie-only wavefolder with output level compensation; zero bypasses it |
-| D | SAMP | Stock sample selector; Sophie does not use the sample |
-| E | SWEEP | Bipolar pitch sweep toward the played note |
-| F | METAL | FM/ring intensity |
-| G | FBK | Oscillator feedback |
-| H | COLOR | Inharmonic character |
+| B | RATIO | Modulator ratio, from sub-harmonic to bright inharmonic tones |
+| C | INDEX | FM depth |
+| D | SAMP | Stock sample selector; FM2OP does not use the sample |
+| E | ATTK | Modulation-envelope attack |
+| F | DECAY | Modulation-envelope decay |
+| G | FBK | Modulator feedback |
+| H | TONE | Brightness and overtone emphasis |
 
 The custom controls can be parameter-locked. The normal AMP page controls
 the note envelope: set HOLD to `NOTE` for TRIG LEN to determine when the
@@ -42,32 +37,27 @@ release begins. Use a finite DEC to hear that release. DEC `INF` can keep
 the sound going indefinitely. Retriggering chokes the previous voice on
 that track, with a brief transition to suppress a click.
 
-SWEEP starts at zero. Turning right begins above the played pitch; turning
-left begins below it. Holding FUNC while turning uses the stock TUNE
-octave-step behavior (-60 to +24); ordinary turning reaches the complete
--64 to +63 range.
-
 
 ## Install: no compiler required
 
 You need only the prebuilt
-[Sophie mod](release/digisophie-1.1.13.elemod),
+[FM2OP mod](release/digisophie-2.0.0.elemod),
 [elekloader](https://github.com/irpina/elekloader/releases/latest), and your
 own original Digitakt Mk1 OS 1.53 `.syx`
 The `.elemod` contains this project's code, **not** Elektron's firmware.
 You do not need ColdFire tools, Python, or a source checkout to install it.
 
 1. Open elekloader and select your stock OS using **Change stock firmware**.
-2. Choose **Install from file** and select `digisophie-1.1.13.elemod`.
-   Enable SOPHIE. elekloader's built-in **core 2.1** should enable with it.
+2. Choose **Install from file** and select `digisophie-2.0.0.elemod`.
+   Enable FM2OP. elekloader's built-in **core 2.1** should enable with it.
    If your elekloader has an older core or shows a dependency error, update
    elekloader before building.
 3. Optional: install and enable the bundled
    [digihealth diagnostic](release/digihealth-1.0.1.elemod) too. This is
    the configuration used for the earlier S027 hardware test. It adds SYSTEM INFO
-   and an opt-in FAST AUDIO setting; without it Sophie still works.
+   and an opt-in FAST AUDIO setting; without it FM2OP still works.
 4. Wait for elekloader's **Ready to build** check, set the four-character
-   OS version to `S033`, then choose **Build Firmware**. Save the generated
+   OS version to `S034`, then choose **Build Firmware**. Save the generated
    `.syx` on your computer.
 5. Send that `.syx` to the Digitakt with Elektron Transfer
 
@@ -88,9 +78,9 @@ ELEKLOADER_CROSS=m68k-elf- sh scripts/build.sh \
   /path/to/your/Digitakt_OS1.53.syx /path/to/elekloader
 ```
 
-This builds core 2.1, Sophie and the optional diagnostic from source,
+This builds core 2.1, FM2OP and the optional diagnostic from source,
 lints the combination, and writes the verified custom OS to
-`out/Digitakt_OS1.53_SOPHIE_S033.syx`. To test DSP alone, run `make test`;
+`out/Digitakt_OS1.53_FM2OP_S034.syx`. To test DSP alone, run `make test`;
 `make cross-check` additionally compiles for ColdFire. Optional emulator
 probes in `tests/` require [digiemu](https://github.com/irpina/digiemu).
 
@@ -102,13 +92,13 @@ that stock file for recovery. If you install the optional diagnostic,
 FAST AUDIO is off by default; SYSTEM INFO and FAST AUDIO can be enabled
 separately in SETTINGS. See [diagnostics](diagnostics/README.md) for the monitor.
 
-Sophie is independent of, and not endorsed by, Elektron or the estate of
-SOPHIE. It contains no Elektron firmware or samples.
+FM2OP is independent of, and not endorsed by, Elektron. It contains no
+Elektron firmware or samples.
 
 ## Source and licenses
 
-The Sophie adaptation is [MIT licensed](LICENSE). The original Sophie
-attribution and the separate GPL-2.0-or-later digihealth source are
+The FM2OP implementation is [MIT licensed](LICENSE). Third-party attribution
+and the separate GPL-2.0-or-later digihealth source are
 documented in [THIRD_PARTY.md](THIRD_PARTY.md). The digihealth license is
 also included in its source directory.
 
