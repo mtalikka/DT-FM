@@ -239,7 +239,7 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 			v->velocity_s = ds_slew8(v->velocity_s, velocity_target);
 
 			ratio_q12 = ds_ratio_q12(v->ratio_s[mod_op]);
-			ratio_q12 = (int32_t)(((int64_t)ratio_q12 * algo->ratio_mul_q15 + 16384) >> 15);
+			ratio_q12 = (ratio_q12 * (int32_t)algo->ratio_mul_q15 + 16384) >> 15;
 			if (ratio_q12 < 256) ratio_q12 = 256;
 			if (ratio_q12 > 32767) ratio_q12 = 32767;
 			feedback_amt = ds_mul(v->feedback_s[mod_op], v->feedback_s[mod_op]);
@@ -285,7 +285,7 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 			fb = (fb * (8192 + ((v->index_s[mod_op] * 24576) >> 15))) >> 12;
 			mod = ds_sin(v->phase[mod_op] + ds_phase_from_radians_q15(fb));
 
-			index_q12 = (int32_t)(((int64_t)v->index_s[mod_op] * algo->index_mul_q15 + 16384) >> 15);
+			index_q12 = (v->index_s[mod_op] * (int32_t)algo->index_mul_q15 + 16384) >> 15;
 			index_q12 = (index_q12 * (1024 + ((v->op_env[mod_op] * 7168) >> 15))) >> 15;
 			phase_mod = ds_index_phase(index_q12, mod, Q15);
 

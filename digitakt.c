@@ -99,6 +99,30 @@ char *ds_fmt_u7(char *out, s32 value)
 static u32 ds_u7(s32 track, s32 offset)
 { return ((u32)(u16)VP(track, offset) >> 8) & 0x7fu; }
 
+static u32 ds_mul_u32_q15_sat(u32 value, u32 mul_q15)
+{
+    u32 integer = mul_q15 >> 15;      /* 0..2 for our semitone table */
+    u32 fraction = mul_q15 & 0x7fffu; /* 0..32767 */
+    u32 result = 0;
+
+    if (integer == 1u) {
+        result = value;
+    } else if (integer == 2u) {
+        if (value > 0x7fffffffu) return 0xffffffffu;
+        result = value << 1;
+    }
+
+    if (fraction) {
+        /* ((value * fraction) + 16384) >> 15 without 64-bit multiply. */
+        u32 hi = value >> 15;
+        u32 lo = value & 0x7fffu;
+        u32 term = hi * fraction + ((lo * fraction + 16384u) >> 15);
+        if (result > 0xffffffffu - term) return 0xffffffffu;
+        result += term;
+    }
+    return result;
+}
+
 static u32 ds_pitch_ratio(s32 track)
 {
     static const u16 semitone_q15[13] = {
@@ -125,9 +149,8 @@ static u32 ds_pitch_ratio(s32 track)
         u32 frac = (u32)pitch & 0xffffu;
         u32 lo = semitone_q15[semitone];
         u32 hi = semitone_q15[semitone + 1u];
-        u32 mul = lo + (u32)((((uint64_t)(hi - lo) * frac) + 32768u) >> 16);
-        uint64_t scaled = (((uint64_t)ratio * mul) + 16384u) >> 15;
-        ratio = scaled > 0xffffffffu ? 0xffffffffu : (u32)scaled;
+        u32 mul = lo + (((hi - lo) * frac + 32768u) >> 16);
+        ratio = ds_mul_u32_q15_sat(ratio, mul);
     }
     return ratio;
 }
