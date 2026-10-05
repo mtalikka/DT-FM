@@ -25,6 +25,7 @@ typedef unsigned long u32;
 #define P_TUNE 0
 #define P_RATIO 2
 #define P_INDEX 4
+#define P_SAMP 6
 #define P_ATTACK 8
 #define P_DECAY 10
 #define P_FEEDBACK 12
@@ -43,6 +44,22 @@ char *ds_fmt_ratio(char *out, s32 value)
     out[2] = (char)('0' + frac / 10u);
     out[3] = (char)('0' + frac % 10u);
     out[4] = 0;
+    return out;
+}
+
+char *ds_fmt_op(char *out, s32 value)
+{
+    u32 n = ((u32)value >> 8) & 0x7fu;
+    out[0] = (char)('1' + (n >> 5));
+    out[1] = 0;
+    return out;
+}
+
+char *ds_fmt_algo(char *out, s32 value)
+{
+    u32 n = ((u32)value >> 8) & 0x7fu;
+    out[0] = (char)('1' + (n >> 4));
+    out[1] = 0;
     return out;
 }
 
@@ -117,18 +134,27 @@ static u32 ds_pitch_ratio(s32 track)
 
 static void ds_read_params(s32 track, struct ds_params *p)
 {
+    u32 v_ratio, v_index, v_attack, v_decay, v_feedback, v_tone;
     u32 ratio = ds_pitch_ratio(track);
     u32 phase_inc = ratio >> 23;
     if (phase_inc < 8) phase_inc = 8;
     if (phase_inc > 32767u) phase_inc = 32767u;
     p->phase_inc = (u16)phase_inc; /* 50 Hz is 68 phase units/sample. */
-    p->ratio = (u8)ds_u7(track, P_RATIO);
-    p->index = (u8)ds_u7(track, P_INDEX);
-    p->attack = (u8)ds_u7(track, P_ATTACK);
-    p->decay = (u8)ds_u7(track, P_DECAY);
-    p->feedback = (u8)ds_u7(track, P_FEEDBACK);
-    p->tone = (u8)ds_u7(track, P_TONE);
+    v_ratio = ds_u7(track, P_RATIO);
+    v_index = ds_u7(track, P_INDEX);
+    v_attack = ds_u7(track, P_ATTACK);
+    v_decay = ds_u7(track, P_DECAY);
+    v_feedback = ds_u7(track, P_FEEDBACK);
+    v_tone = ds_u7(track, P_TONE);
+    p->algo = (u8)(v_ratio >> 4);       /* B: ALGO, 1..8 zones */
+    p->ratio = (u8)v_index;             /* C: RATIO */
+    p->index = (u8)v_attack;            /* E: INDEX */
+    p->attack = (u8)v_decay;            /* F: ATTK */
+    p->decay = (u8)v_feedback;          /* G: DECAY */
+    p->feedback = (u8)v_tone;           /* H: CHAR macro */
+    p->tone = (u8)v_tone;               /* H: CHAR macro */
     p->velocity = (u8)(((u32)(u16)VEL(track) >> 8) & 0x7fu);
+    p->op_select = (u8)(ds_u7(track, P_SAMP) >> 5);
 }
 
 void ds_inject(void)

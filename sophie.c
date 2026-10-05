@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: MIT
  *
- * Two-operator FM synth for Digitakt Mk1. Audio enters Digitakt's stock
+ * Four-operator FM scaffold for Digitakt Mk1. Audio enters Digitakt's stock
  * AMP/filter/mixer path; this source block only renders the oscillator core.
+ * Milestone 1 keeps Algorithm 0 equivalent to the previous two-operator tone.
  */
 #include "sophie.h"
 
@@ -91,18 +92,43 @@ static int32_t ds_decay_step(int32_t decay_q15)
 	return 2 + (((Q15 - decay_q15) * 510) >> 15);
 }
 
+struct ds_algo {
+	uint8_t carrier_op;
+	uint8_t mod_op;
+	uint8_t feedback_op;
+	uint16_t ratio_mul_q15;
+	uint16_t index_mul_q15;
+};
+
+/* Algorithm slots currently pick carrier/modulator pairings and apply small
+ * ratio/index scalings so ALGO audibly changes timbre before full M2 routing. */
+static const struct ds_algo ds_algo_table[8] = {
+	{0, 1, 1, 32767, 32767}, {0, 2, 2, 23170, 32767},
+	{0, 3, 3, 46341, 32767}, {1, 2, 2, 16384, 24576},
+	{1, 3, 3, 49152, 28672}, {2, 3, 3, 32767, 49152},
+	{3, 0, 0, 8192, 57344},  {2, 0, 0, 65535, 20480}
+};
+
 void ds_voice_init(struct ds_voice *v)
 {
-	v->carrier = v->modulator = 0;
-	v->mod_env = 0;
+	uint32_t i;
+	for (i = 0; i < DS_OPS; ++i) {
+		v->phase[i] = 0;
+		v->op_env[i] = 0;
+		v->op_feedback_z[i] = 0;
+		v->ratio_s[i] = 0;
+		v->index_s[i] = 0;
+		v->attack_s[i] = 0;
+		v->decay_s[i] = 0;
+		v->feedback_s[i] = 0;
+	}
 	v->amp_env = 0;
-	v->feedback_z = 0;
 	v->tone_z = 0;
-	v->ratio_s = v->index_s = v->attack_s = v->decay_s = 0;
-	v->feedback_s = v->tone_s = v->velocity_s = 0;
+	v->tone_s = v->velocity_s = 0;
 	v->last = v->tail = 0;
 	v->transition = 0;
 	v->env_rise = 0;
+	v->op_current = 1;
 	v->sleeping = v->quiet_blocks = v->fade_left = 0;
 	v->active = 0;
 }
@@ -136,6 +162,12 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 					 int trigger, int32_t *out, uint32_t n)
 {
 	uint32_t i;
+	uint32_t j;
+	const struct ds_algo *algo = &ds_algo_table[p->algo & 7u];
+	uint32_t pair_shift = (uint32_t)p->op_select & 3u;
+	uint32_t carrier_op = (algo->carrier_op + pair_shift) & 3u;
+	uint32_t mod_op = (algo->mod_op + pair_shift) & 3u;
+	uint32_t feedback_op = mod_op;
 	int32_t ratio_target = ds_u7_q15(p->ratio);
 	int32_t index_target = ds_u7_q15(p->index);
 	int32_t attack_target = ds_u7_q15(p->attack);
@@ -156,24 +188,35 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 			v->transition = 64;
 		}
 		if (!v->active) {
-			v->ratio_s = ratio_target;
-			v->index_s = index_target;
-			v->attack_s = attack_target;
-			v->decay_s = decay_target;
-			v->feedback_s = feedback_target;
+			for (j = 0; j < DS_OPS; ++j) {
+				v->ratio_s[j] = ratio_target;
+				v->index_s[j] = index_target;
+				v->attack_s[j] = attack_target;
+				v->decay_s[j] = decay_target;
+				v->feedback_s[j] = feedback_target;
+			}
 			v->tone_s = tone_target;
 			v->velocity_s = velocity_target;
 			v->tail = 0;
 			v->transition = 0;
 		}
-		v->carrier = v->modulator = 0;
-		v->mod_env = 0;
+		for (j = 0; j < DS_OPS; ++j) {
+			v->phase[j] = 0;
+			v->op_env[j] = 0;
+			v->op_feedback_z[j] = 0;
+		}
 		v->amp_env = Q15;
-		v->feedback_z = 0;
+		v->op_env[carrier_op] = Q15;
 		v->tone_z = 0;
 		v->env_rise = 1;
+		v->op_current = (uint8_t)mod_op;
 		v->sleeping = v->quiet_blocks = v->fade_left = 0;
 		v->active = 1;
+	} else if (v->active && v->op_current != (uint8_t)mod_op) {
+		v->tail = v->last;
+		v->transition = 64;
+		v->op_current = (uint8_t)mod_op;
+		v->env_rise = 1;
 	}
 
 	for (i = 0; i < n; i += 2) {
@@ -187,30 +230,33 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 		}
 
 		if (control_tick) {
-			v->ratio_s = ds_slew8(v->ratio_s, ratio_target);
-			v->index_s = ds_slew8(v->index_s, index_target);
-			v->attack_s = ds_slew8(v->attack_s, attack_target);
-			v->decay_s = ds_slew8(v->decay_s, decay_target);
-			v->feedback_s = ds_slew8(v->feedback_s, feedback_target);
+			v->ratio_s[mod_op] = ds_slew8(v->ratio_s[mod_op], ratio_target);
+			v->index_s[mod_op] = ds_slew8(v->index_s[mod_op], index_target);
+			v->attack_s[mod_op] = ds_slew8(v->attack_s[mod_op], attack_target);
+			v->decay_s[mod_op] = ds_slew8(v->decay_s[mod_op], decay_target);
+			v->feedback_s[mod_op] = ds_slew8(v->feedback_s[mod_op], feedback_target);
 			v->tone_s = ds_slew8(v->tone_s, tone_target);
 			v->velocity_s = ds_slew8(v->velocity_s, velocity_target);
 
-			ratio_q12 = ds_ratio_q12(v->ratio_s);
-			feedback_amt = ds_mul(v->feedback_s, v->feedback_s);
-			attack_step = ds_attack_step(v->attack_s);
-			decay_step = ds_decay_step(v->decay_s);
+			ratio_q12 = ds_ratio_q12(v->ratio_s[mod_op]);
+			ratio_q12 = (int32_t)(((int64_t)ratio_q12 * algo->ratio_mul_q15 + 16384) >> 15);
+			if (ratio_q12 < 256) ratio_q12 = 256;
+			if (ratio_q12 > 32767) ratio_q12 = 32767;
+			feedback_amt = ds_mul(v->feedback_s[mod_op], v->feedback_s[mod_op]);
+			attack_step = ds_attack_step(v->attack_s[mod_op]);
+			decay_step = ds_decay_step(v->decay_s[mod_op]);
 			tone_rate = 1024 + ((v->tone_s * 14336) >> 15);
 		}
 
 		if (v->env_rise) {
-			v->mod_env += attack_step;
-			if (v->mod_env >= Q15) {
-				v->mod_env = Q15;
+			v->op_env[mod_op] += attack_step;
+			if (v->op_env[mod_op] >= Q15) {
+				v->op_env[mod_op] = Q15;
 				v->env_rise = 0;
 			}
-		} else if (v->mod_env > 0) {
-			v->mod_env -= decay_step;
-			if (v->mod_env < 0) v->mod_env = 0;
+		} else if (v->op_env[mod_op] > 0) {
+			v->op_env[mod_op] -= decay_step;
+			if (v->op_env[mod_op] < 0) v->op_env[mod_op] = 0;
 		}
 		if (v->amp_env > 0) {
 			v->amp_env -= (v->amp_env * 14 + 32767) >> 15;
@@ -229,26 +275,27 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 			int32_t raw;
 			int32_t tone_mix;
 
-			v->carrier += (uint32_t)inc << 17;
+			v->phase[carrier_op] += (uint32_t)inc << 17;
 			mod_step = (inc * ratio_q12) >> 11;
 			if (mod_step < 1) mod_step = 1;
 			if (mod_step > 49152) mod_step = 49152;
-			v->modulator += (uint32_t)mod_step << 16;
+			v->phase[mod_op] += (uint32_t)mod_step << 16;
 
-			fb = ds_mul(v->feedback_z, feedback_amt);
-			fb = (fb * (8192 + ((v->index_s * 24576) >> 15))) >> 12;
-			mod = ds_sin(v->modulator + ds_phase_from_radians_q15(fb));
+			fb = ds_mul(v->op_feedback_z[feedback_op], feedback_amt);
+			fb = (fb * (8192 + ((v->index_s[mod_op] * 24576) >> 15))) >> 12;
+			mod = ds_sin(v->phase[mod_op] + ds_phase_from_radians_q15(fb));
 
-			index_q12 = (v->index_s * (1024 + ((v->mod_env * 7168) >> 15))) >> 15;
+			index_q12 = (int32_t)(((int64_t)v->index_s[mod_op] * algo->index_mul_q15 + 16384) >> 15);
+			index_q12 = (index_q12 * (1024 + ((v->op_env[mod_op] * 7168) >> 15))) >> 15;
 			phase_mod = ds_index_phase(index_q12, mod, Q15);
 
-			car = ds_sin(v->carrier + phase_mod);
-			bright = ds_sin((v->carrier << 1) + (phase_mod >> 1));
+			car = ds_sin(v->phase[carrier_op] + phase_mod);
+			bright = ds_sin((v->phase[carrier_op] << 1) + (phase_mod >> 1));
 			tone_mix = v->tone_s >> 1;
 			raw = ds_mul(car, Q15 - tone_mix) + ds_mul(bright, tone_mix);
 			raw = ds_mul(raw, 16384 + (v->amp_env >> 1));
 
-			v->feedback_z += (mod - v->feedback_z) >> 2;
+			v->op_feedback_z[feedback_op] += (mod - v->op_feedback_z[feedback_op]) >> 2;
 			v->tone_z += ((raw - v->tone_z) * tone_rate) >> 15;
 
 			y = ds_mul(v->tone_z, v->velocity_s);

@@ -23,13 +23,13 @@ operation is **not** claimed.
 | SRC knob | Control | What it does |
 | --- | --- | --- |
 | A | TUNE | Pitch |
-| B | RATIO | Modulator ratio, from sub-harmonic to bright inharmonic tones |
-| C | INDEX | FM depth |
-| D | SAMP | Stock sample selector; FM2OP does not use the sample |
-| E | ATTK | Modulation-envelope attack |
-| F | DECAY | Modulation-envelope decay |
-| G | FBK | Modulator feedback |
-| H | TONE | Brightness and overtone emphasis |
+| B | ALGO | Selects FM routing algorithm (1-8) |
+| C | RATIO | Modulator ratio, from sub-harmonic to bright inharmonic tones |
+| D | OP | Selects the active operator (1-4) that FM macros target |
+| E | INDEX | FM depth |
+| F | ATTK | Modulation-envelope attack |
+| G | DECAY | Modulation-envelope decay |
+| H | CHAR | Shared character macro for feedback and brightness |
 
 The custom controls can be parameter-locked. The normal AMP page controls
 the note envelope: set HOLD to `NOTE` for TRIG LEN to determine when the

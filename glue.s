@@ -211,8 +211,6 @@ ds_is_control:
         bcs.s 8f
         cmpi.l #P_TONE,%d0
         bhi.s 8f
-        cmpi.l #P_SAMP,%d0
-        beq.s 8f
         moveq #1,%d1
         rts
 8:      moveq #0,%d1
@@ -273,11 +271,6 @@ ds_prange_f:
         move.b 126(%a1),%d0
         cmpi.l #DS_ID,%d0
         bne.s 9f
-        cmpi.l #P_SAMP,%d1
-        bne.s 8f
-        clr.l 8(%a0)                   | new FM2OP sounds start at SAMP 0
-        bra.s 9f
-8:
         subi.l #P_RATIO,%d1
         lsl.l #3,%d1
         lea ds_range_tab,%a1
@@ -294,13 +287,15 @@ ds_val_text:
         move.l 8(%sp),%d0
         cmpi.l #P_RATIO,%d0
         beq.s 2f
-        cmpi.l #P_ATTACK,%d0
-        beq.s 4f
+        cmpi.l #P_SAMP,%d0
+        beq.s 6f
+        cmpi.l #P_INDEX,%d0
+        beq.s 7f
         cmpi.l #P_DECAY,%d0
         beq.s 4f
-        cmpi.l #P_INDEX,%d0
-        beq.s 5f
         cmpi.l #P_FEEDBACK,%d0
+        beq.s 4f
+        cmpi.l #P_ATTACK,%d0
         beq.s 5f
         cmpi.l #P_TONE,%d0
         bne.s 1f
@@ -309,7 +304,12 @@ ds_val_text:
 4:
         move.l #ds_fmt_time,%a0
         bra.s 3f
-2:      move.l #ds_fmt_ratio,%a0
+6:
+        move.l #ds_fmt_op,%a0
+        bra.s 3f
+7:      move.l #ds_fmt_ratio,%a0
+        bra.s 3f
+2:      move.l #ds_fmt_algo,%a0
 3:
         moveq #DS_ID,%d1
         cmp.l ds_page_m,%d1
@@ -326,13 +326,15 @@ ds_pop_text:
         move.l 4(%sp),%d0
         cmpi.l #P_RATIO,%d0
         beq.s 2f
-        cmpi.l #P_ATTACK,%d0
-        beq.s 4f
+        cmpi.l #P_SAMP,%d0
+        beq.s 6f
+        cmpi.l #P_INDEX,%d0
+        beq.s 7f
         cmpi.l #P_DECAY,%d0
         beq.s 4f
-        cmpi.l #P_INDEX,%d0
-        beq.s 5f
         cmpi.l #P_FEEDBACK,%d0
+        beq.s 4f
+        cmpi.l #P_ATTACK,%d0
         beq.s 5f
         cmpi.l #P_TONE,%d0
         bne.s 1f
@@ -341,7 +343,12 @@ ds_pop_text:
 4:
         move.l #ds_fmt_time,%a0
         bra.s 3f
-2:      move.l #ds_fmt_ratio,%a0
+6:
+        move.l #ds_fmt_op,%a0
+        bra.s 3f
+7:      move.l #ds_fmt_ratio,%a0
+        bra.s 3f
+2:      move.l #ds_fmt_algo,%a0
 3:
         moveq #DS_ID,%d1
         cmp.l ds_page_m,%d1
@@ -355,23 +362,24 @@ ds_pop_text:
         cmpi.l #164,%d1
         jmp 0x400657f8
         .balign 4
-ds_short_tab: .long ds_s_tune,ds_s_ratio,ds_s_index,0,ds_s_attack,ds_s_decay,ds_s_feedback,ds_s_tone
-ds_long_tab: .long ds_l_tune,ds_l_ratio,ds_l_index,0,ds_l_attack,ds_l_decay,ds_l_feedback,ds_l_tone
-ds_chooser_tab: .long ds_l_tune,ds_l_ratio,ds_l_index,0x401ccabe,ds_l_attack,ds_l_decay,ds_l_feedback,ds_l_tone
-ds_overview_tab: .long ds_s_tune,ds_s_ratio,ds_s_index,ds_s_samp,ds_s_attack,ds_s_decay,ds_s_feedback,ds_s_tone
-ds_range_tab: .long 0x7f00,0x3000,0x7f00,0x4000,0x7f00,0x0000,0x7f00,0x1000,0x7f00,0x5000,0x7f00,0x2800,0x7f00,0x4000
+ds_short_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_index,ds_s_attack,ds_s_decay,ds_s_char
+ds_long_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_index,ds_l_attack,ds_l_decay,ds_l_char
+ds_chooser_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_index,ds_l_attack,ds_l_decay,ds_l_char
+ds_overview_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_index,ds_s_attack,ds_s_decay,ds_s_char
+ds_range_tab: .long 0x7f00,0x0000,0x7f00,0x4000,0x7f00,0x0000,0x7f00,0x5000,0x7f00,0x1000,0x7f00,0x5000,0x7f00,0x4000
 ds_s_tune: .asciz "TUNE"
+ds_s_algo: .asciz "ALGO"
 ds_s_ratio: .asciz "RATIO"
+ds_s_op: .asciz "OP"
 ds_s_index: .asciz "INDEX"
-ds_s_samp: .asciz "SAMP"
-ds_s_tone: .asciz "TONE"
-ds_s_decay: .asciz "DECAY"
 ds_s_attack: .asciz "ATTK"
-ds_s_feedback: .asciz "FBK"
+ds_s_decay: .asciz "DECAY"
+ds_s_char: .asciz "CHAR"
 ds_l_tune: .asciz "Tune"
+ds_l_algo: .asciz "Algorithm"
 ds_l_ratio: .asciz "Ratio"
+ds_l_op: .asciz "Operator"
 ds_l_index: .asciz "Index"
-ds_l_tone: .asciz "Tone"
-ds_l_decay: .asciz "Decay"
 ds_l_attack: .asciz "Attack"
-ds_l_feedback: .asciz "Feedback"
+ds_l_decay: .asciz "Decay"
+ds_l_char: .asciz "Character"

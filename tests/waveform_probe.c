@@ -51,7 +51,7 @@ static void probe(const char *name, struct ds_params p)
 
 int main(void)
 {
-    struct ds_params p = {180, 64, 64, 16, 80, 32, 64, 127};
+    struct ds_params p = {180, 64, 64, 16, 80, 32, 64, 127, 0, 0};
 
     probe("neutral", p);
 

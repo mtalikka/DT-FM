@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #define DS_BLOCK_SIZE 32
+#define DS_OPS 4
 /* Exact 0..127 to Q15 mapping without a ColdFire signed divide:
  * 32767 = 127*258 + 1. */
 static inline int32_t ds_u7_q15(uint8_t x)
@@ -20,19 +21,21 @@ struct ds_params {
     uint8_t feedback;
     uint8_t tone;
     uint8_t velocity;
+    uint8_t op_select;
+    uint8_t algo;
 };
 
 struct ds_voice {
-    uint32_t carrier;
-    uint32_t modulator;
-    int32_t mod_env;
+    uint32_t phase[DS_OPS];
+    int32_t op_env[DS_OPS];
+    int32_t op_feedback_z[DS_OPS];
     int32_t amp_env;
-    int32_t feedback_z;
     int32_t tone_z;
-    int32_t ratio_s, index_s, attack_s, decay_s;
-    int32_t feedback_s, tone_s, velocity_s;
+    int32_t ratio_s[DS_OPS], index_s[DS_OPS], attack_s[DS_OPS], decay_s[DS_OPS];
+    int32_t feedback_s[DS_OPS], tone_s, velocity_s;
     int32_t last, tail;
     uint8_t transition, env_rise;
+    uint8_t op_current;
     uint8_t active, sleeping, quiet_blocks;
     uint8_t fade_left;
 };
