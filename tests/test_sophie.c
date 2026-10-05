@@ -101,6 +101,16 @@ int main(void)
     ds_voice_render(&vb, &p, 1, b, 4096);
     assert(difference(a, b, 4096) > 80000);
 
+    /* Upper-note tracking must keep advancing: very high phase increments
+     * must not collapse to one clamped pitch. */
+    p = (struct ds_params){25000, 64, 48, 16, 90, 24, 64, 127};
+    ds_voice_init(&va);
+    ds_voice_render(&va, &p, 1, a, 4096);
+    p.phase_inc = 32000;
+    ds_voice_init(&vb);
+    ds_voice_render(&vb, &p, 1, b, 4096);
+    assert(difference(a, b, 4096) > 20000);
+
     for (i = 0; i < 4096; ++i) {
         int32_t s = b[i] / 65536;
         assert(s < 32768 && s > -32769);

@@ -84,18 +84,44 @@ static u32 ds_u7(s32 track, s32 offset)
 
 static u32 ds_pitch_ratio(s32 track)
 {
+    static const u16 semitone_q15[13] = {
+        32768, 34716, 36781, 38968, 41285, 43740, 46341,
+        49097, 52016, 55109, 58386, 61858, 65536
+    };
+    enum { TAB_MAX_PITCH = 87 << 16 };
     s32 pitch = ((s32)VP(track, P_TUNE) - 0x4000) * 256
         + NOTE(track) + (3 << 16);
+    u32 ratio;
     if (pitch < 0) pitch = 0;
-    if (pitch > (87 << 16)) pitch = 87 << 16;
-    return PITCH_TAB[(u32)pitch / 384u]; /* Q29, as stock playback uses. */
+    if (pitch <= TAB_MAX_PITCH)
+        return PITCH_TAB[(u32)pitch / 384u]; /* Q29, as stock playback uses. */
+
+    /* Stock table reads stay in-range; higher notes are extrapolated. */
+    ratio = PITCH_TAB[(u32)TAB_MAX_PITCH / 384u];
+    pitch -= TAB_MAX_PITCH;
+    while (pitch >= (12 << 16) && ratio < 0x80000000u) {
+        ratio <<= 1;
+        pitch -= 12 << 16;
+    }
+    if (pitch > 0 && ratio < 0xffffffffu) {
+        u32 semitone = (u32)pitch >> 16;
+        u32 frac = (u32)pitch & 0xffffu;
+        u32 lo = semitone_q15[semitone];
+        u32 hi = semitone_q15[semitone + 1u];
+        u32 mul = lo + (u32)((((uint64_t)(hi - lo) * frac) + 32768u) >> 16);
+        uint64_t scaled = (((uint64_t)ratio * mul) + 16384u) >> 15;
+        ratio = scaled > 0xffffffffu ? 0xffffffffu : (u32)scaled;
+    }
+    return ratio;
 }
 
 static void ds_read_params(s32 track, struct ds_params *p)
 {
     u32 ratio = ds_pitch_ratio(track);
-    p->phase_inc = (u16)(ratio >> 23); /* 50 Hz is 68 phase units/sample. */
-    if (p->phase_inc < 8) p->phase_inc = 8;
+    u32 phase_inc = ratio >> 23;
+    if (phase_inc < 8) phase_inc = 8;
+    if (phase_inc > 32767u) phase_inc = 32767u;
+    p->phase_inc = (u16)phase_inc; /* 50 Hz is 68 phase units/sample. */
     p->ratio = (u8)ds_u7(track, P_RATIO);
     p->index = (u8)ds_u7(track, P_INDEX);
     p->attack = (u8)ds_u7(track, P_ATTACK);

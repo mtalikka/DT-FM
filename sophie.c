@@ -218,7 +218,7 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 		}
 
 		{
-			int32_t inc = ds_clamp((int32_t)p->phase_inc, 8, 24576);
+			int32_t inc = ds_clamp((int32_t)p->phase_inc, 8, 32767);
 			int32_t mod_step;
 			int32_t fb;
 			int32_t mod;
