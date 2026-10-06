@@ -87,7 +87,7 @@ layouts with operator numbers; `>` means "modulates":
 Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 
 
-## Install: no compiler required <NOT CURRENTLY WORKING>
+## Install: no compiler required (NOT CURRENTLY WORKING)
 
 You need only the prebuilt
 [DT-FM mod](release/dt-fm-1.0.0.elemod),
