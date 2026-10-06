@@ -5,7 +5,7 @@
   "title": "FM2OP",
   "category": "Synthesis",
   "author": "digisophie contributors",
-  "description": "Two-operator FM synth machine for Digitakt Mk1. Audio enters the normal Digitakt AMP, filter, mixer and sends.",
+  "description": "Four-operator FM synth machine for Digitakt Mk1. Audio enters the normal Digitakt AMP, filter, mixer and sends.",
   "device": "digitakt-mk1",
   "os": "1.53",
   "sources": ["glue.s", "digitakt.c", "sophie.c"],
@@ -34,5 +34,6 @@
     {"to": "core_machines", "order": 70, "data": "00000000", "relocs": [[0, "abs32", "sym:ds_machine", 0]]}
   ],
   "requires": ["core"],
+  "subscribe": [{"event": "ev_tick", "fn": "ds_tick", "order": 10}],
   "resources": {"names": ["machine:7"]}
 }

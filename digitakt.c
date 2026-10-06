@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT */
-/* Digitakt Mk1 OS 1.53 adapter for the two-operator FM engine. */
+/* Digitakt Mk1 OS 1.53 adapter for the four-operator FM engine. */
 #include "sophie.h"
 
 typedef unsigned char u8;
@@ -19,30 +19,45 @@ typedef unsigned long u32;
 #define AMP_LEVEL(t) (*(volatile const s32 *)(unsigned long)(0x4199df58u + 12u * (u32)(t)))
 #define AMP_PHASE(t) (*(volatile const s32 *)(unsigned long)(0x4199df54u + 12u * (u32)(t)))
 #define PITCH_TAB ((const u32 *)(unsigned long)0x4019b1c0u)
+/* The render's live sound per track: s16 params at +20 + 2*slot, machine at +126. */
+#define SOUND(t) (*(u8 *volatile const *)(unsigned long)(0x800019b4u + 4u * (u32)(t)))
+#define S_PARAM(s, slot) (*(volatile s16 *)((s) + 20 + 2 * (slot)))
 
 /* SLICE's persistent SRC slots: A..H.  Core makes those values recallable,
  * lockable and reachable via MIDI CC/NRPN for custom machines. */
 #define P_TUNE 0
-#define P_RATIO 2
-#define P_INDEX 4
-#define P_SAMP 6
-#define P_ATTACK 8
-#define P_DECAY 10
-#define P_FEEDBACK 12
-#define P_TONE 14
+#define P_ALGO 2
+#define P_CHAR 14
+#define S_OP 0x14
+#define DS_OP_INIT {{16, 127, 0, 127}, {16, 80, 0, 90}, {36, 40, 0, 70}, {16, 30, 0, 60}}
 
 static struct ds_voice ds_voices[TRACKS];
+/* Knobs C, E, F, G edit the selected operator; the others are RAM-only. */
+static const u8 ds_op_slot[4] = {0x13, 0x15, 0x16, 0x17};
+static const u8 ds_op_init[DS_OPS][4] = DS_OP_INIT;
+static u8 ds_op[TRACKS][DS_OPS][4] = {
+    DS_OP_INIT, DS_OP_INIT, DS_OP_INIT, DS_OP_INIT,
+    DS_OP_INIT, DS_OP_INIT, DS_OP_INIT, DS_OP_INIT
+};
+static u8 *ds_snd[TRACKS];
+static u8 ds_sel[TRACKS];
+static u8 ds_ready[TRACKS];
+extern volatile u8 ds_d_turned;
 
 char *ds_fmt_ratio(char *out, s32 value)
 {
-    u32 n = ((u32)value >> 8) & 0x7fu;
-    u32 centi = 25u + ((n * 375u + 63u) / 127u); /* 0.25x .. 4.00x */
-    u32 whole = centi / 100u;
-    u32 frac = centi % 100u;
-    out[0] = (char)('0' + whole);
-    out[1] = '.';
-    out[2] = (char)('0' + frac / 10u);
-    out[3] = (char)('0' + frac % 10u);
+    u32 c = ds_ratio_centi[(((u32)value >> 8) & 0x7fu) >> 2];
+    if (c >= 1000u) {
+        out[0] = (char)('0' + c / 1000u);
+        out[1] = (char)('0' + c / 100u % 10u);
+        out[2] = '.';
+        out[3] = (char)('0' + c / 10u % 10u);
+    } else {
+        out[0] = (char)('0' + c / 100u);
+        out[1] = '.';
+        out[2] = (char)('0' + c / 10u % 10u);
+        out[3] = (char)('0' + c % 10u);
+    }
     out[4] = 0;
     return out;
 }
@@ -63,28 +78,6 @@ char *ds_fmt_algo(char *out, s32 value)
     return out;
 }
 
-char *ds_fmt_time(char *out, s32 value)
-{
-    u32 n = ((u32)value >> 8) & 0x7fu;
-    u32 ms = 2u + ((n * 998u + 63u) / 127u);
-    char *p = out;
-    if (ms >= 1000u) {
-        *p++ = '1';
-        ms -= 1000u;
-        *p++ = (char)('0' + ms / 100u);
-    } else if (ms >= 100u) {
-        *p++ = (char)('0' + ms / 100u);
-        ms %= 100u;
-    }
-    if (ms >= 10u || p != out) {
-        *p++ = (char)('0' + ms / 10u);
-        ms %= 10u;
-    }
-    *p++ = (char)('0' + ms);
-    *p = 0;
-    return out;
-}
-
 char *ds_fmt_u7(char *out, s32 value)
 {
     u32 n = ((u32)value >> 8) & 0x7fu;
@@ -94,6 +87,18 @@ char *ds_fmt_u7(char *out, s32 value)
     *p++ = (char)('0' + n % 10);
     *p = 0;
     return out;
+}
+
+char *ds_fmt_decay(char *out, s32 value)
+{
+    if ((((u32)value >> 8) & 0x7fu) == 127u) {
+        out[0] = 'I';
+        out[1] = 'N';
+        out[2] = 'F';
+        out[3] = 0;
+        return out;
+    }
+    return ds_fmt_u7(out, value);
 }
 
 static u32 ds_u7(s32 track, s32 offset)
@@ -157,28 +162,22 @@ static u32 ds_pitch_ratio(s32 track)
 
 static void ds_read_params(s32 track, struct ds_params *p)
 {
-    u32 v_ratio, v_index, v_attack, v_decay, v_feedback, v_tone, v_op;
+    u32 k;
     u32 ratio = ds_pitch_ratio(track);
     u32 phase_inc = ratio >> 23;
     if (phase_inc < 8) phase_inc = 8;
     if (phase_inc > 32767u) phase_inc = 32767u;
     p->phase_inc = (u16)phase_inc; /* 50 Hz is 68 phase units/sample. */
-    v_ratio = ds_u7(track, P_RATIO);
-    v_index = ds_u7(track, P_INDEX);
-    v_attack = ds_u7(track, P_ATTACK);
-    v_decay = ds_u7(track, P_DECAY);
-    v_feedback = ds_u7(track, P_FEEDBACK);
-    v_tone = ds_u7(track, P_TONE);
-    p->algo = (u8)(v_ratio >> 4);       /* B: ALGO, 1..8 zones */
-    p->ratio = (u8)v_index;             /* C: RATIO */
-    p->index = (u8)v_attack;            /* E: INDEX */
-    p->attack = (u8)v_decay;            /* F: ATTK */
-    p->decay = (u8)v_feedback;          /* G: DECAY */
-    p->feedback = (u8)v_tone;           /* H: CHAR macro */
-    p->tone = (u8)v_tone;               /* H: CHAR macro */
+    p->algo = (u8)(ds_u7(track, P_ALGO) >> 4);         /* B: 8 zones */
+    p->feedback = p->tone = (u8)ds_u7(track, P_CHAR);  /* H: CHAR macro */
     p->velocity = (u8)(((u32)(u16)VEL(track) >> 8) & 0x7fu);
-    v_op = ds_u7(track, P_SAMP) >> 3;   /* D: OP, four positions */
-    p->op_select = (u8)(v_op > 3u ? 3u : v_op);
+    for (k = 0; k < DS_OPS; ++k) {
+        const u8 *o = ds_op[track][k];
+        p->op[k].ratio = o[0];
+        p->op[k].level = o[1];
+        p->op[k].attack = o[2];
+        p->op[k].decay = o[3];
+    }
 }
 
 void ds_inject(void)
@@ -204,4 +203,43 @@ void ds_inject(void)
         ds_voice_render(&ds_voices[track], &params, trigger,
                         TBUF(track), DS_BLOCK_SIZE);
     }
+}
+
+static u32 ds_s7(u8 *s, u32 slot)
+{ return ((u32)(u16)S_PARAM(s, slot) >> 8) & 0x7fu; }
+
+void ds_tick(void *ctrl)
+{
+    u32 t, k, j, sel, redraw = 0;
+    for (t = 0; t < TRACKS; ++t) {
+        u8 *s = SOUND(t);
+        u8 cur[4];
+        if (!s || s[126] != DS_MACHINE) {
+            ds_ready[t] = 0;
+            continue;
+        }
+        if (!ds_ready[t]) {
+            for (k = 0; k < DS_OPS; ++k)
+                for (j = 0; j < 4u; ++j) ds_op[t][k][j] = ds_op_init[k][j];
+            ds_snd[t] = 0;
+            ds_ready[t] = 1;
+        }
+        sel = ds_s7(s, S_OP) >> 3;
+        if (sel > 3u) sel = 3u;
+        for (j = 0; j < 4u; ++j) cur[j] = (u8)ds_s7(s, ds_op_slot[j]);
+        /* Swap only on a D turn: a new pattern or loaded sound brings its own op. */
+        if (sel != ds_sel[t] && s == ds_snd[t] && ds_d_turned) {
+            for (j = 0; j < 4u; ++j) {
+                ds_op[t][ds_sel[t]][j] = cur[j];
+                cur[j] = ds_op[t][sel][j];
+                S_PARAM(s, ds_op_slot[j]) = (s16)(cur[j] << 8);
+            }
+            redraw = 1;
+        }
+        for (j = 0; j < 4u; ++j) ds_op[t][sel][j] = cur[j];
+        ds_sel[t] = (u8)sel;
+        ds_snd[t] = s;
+    }
+    ds_d_turned = 0;
+    if (redraw) *((volatile u8 *)ctrl + 0x20) = 1;
 }

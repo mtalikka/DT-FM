@@ -18,9 +18,10 @@ the Digitakt's audio render at `0x40077fba` and calls `ds_inject` after the
 stock source work. For each FM2OP track, `digitakt.c` reads its current
 controls and trigger state, writes 32 mono `int32_t` source samples to the
 track buffer at `0x80001a18 + 128*track`, then lets the stock AMP, filter,
-mixer and sends process them. FM2OP uses the SRC pages as TUNE, RATIO, INDEX,
-SAMP, ATTK, DECAY, FBK and TONE; SAMP remains stock-backed but unused by the
-synth source.
+mixer and sends process them. FM2OP uses the SRC page as TUNE, ALGO, RATIO,
+OP, LEVEL, ATTK, DECAY and CHAR. OP (the stock SAMP slot) picks the operator
+that RATIO, LEVEL, ATTK and DECAY show; `ds_tick` keeps the other operators
+in RAM and swaps them onto those knobs when OP turns.
 
 The audio callback runs every 32 frames at 48 kHz, about 1,500 times per
 second. It is time-critical: a synth optimization must reduce work **while
@@ -31,9 +32,9 @@ of accumulating another one.
 ## Fixed-point renderer
 
 `sophie.c` evaluates 16 synth samples at 24 kHz for each 32-frame output
-block and linearly interpolates to 48 kHz. It uses a two-operator FM core:
-one carrier oscillator and one modulator oscillator with optional feedback,
-plus a modulation envelope (attack/decay) and a tone-stage filter blend.
+block and linearly interpolates to 48 kHz. It runs four sine operators, each
+with its own ratio, level and attack/decay envelope, routed by one of eight
+algorithms; operator 4 has feedback. A one-pole tone filter follows.
 The common soft clip uses a 65-point lookup with linear interpolation.
 
 The slowly moving controls update every four synth samples. Feedback and

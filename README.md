@@ -1,14 +1,14 @@
 # FM2OP for Digitakt
 
-FM2OP is a two-operator FM synth machine for the original Digitakt
+FM2OP is a four-operator FM synth machine for the original Digitakt
 (Mk1), OS 1.53. It replaces the previous Sophie-centric voice model with
-a dedicated carrier/modulator engine and keeps Digitakt's regular AMP,
+a dedicated FM engine and keeps Digitakt's regular AMP,
 filter, mixer and effects path. The source, not a modified Elektron OS,
 is what this repository distributes.
 
 ## Changelog
 
-- **S034:** Replaced the Sophie voice code with a dedicated 2-op FM machine.
+- **S034:** Replaced the Sophie voice code with a dedicated 4-op FM machine.
 
 ---
 
@@ -23,15 +23,23 @@ operation is **not** claimed.
 | SRC knob | Control | What it does |
 | --- | --- | --- |
 | A | TUNE | Pitch |
-| B | ALGO | Selects FM routing algorithm (1-8) |
-| C | RATIO | Modulator ratio, from sub-harmonic to bright inharmonic tones |
-| D | OP | Selects the active operator (1-4) that FM macros target |
-| E | INDEX | FM depth |
-| F | ATTK | Modulation-envelope attack |
-| G | DECAY | Modulation-envelope decay |
-| H | CHAR | Shared character macro for feedback and brightness |
+| B | ALGO | Operator routing (1-8, below) |
+| C | RATIO | Selected operator's frequency ratio, 0.25 to 16 |
+| D | OP | Which operator (1-4) RATIO, LEVEL, ATTK and DECAY edit |
+| E | LEVEL | Selected operator's level: volume as a carrier, depth as a modulator |
+| F | ATTK | Selected operator's envelope attack |
+| G | DECAY | Selected operator's envelope decay; `INF` holds |
+| H | CHAR | Operator 4 feedback and overall brightness |
 
-The custom controls can be parameter-locked. The normal AMP page controls
+Algorithms, where `>` means "modulates": 1 `4>3>2>1`, 2 `(3+4)>2>1`,
+3 `(2 + 4>3)>1`, 4 `(2+3+4)>1`, 5 `2>1, 4>3`, 6 `4>(1, 2, 3)`,
+7 `1, 2, 4>3`, 8 `1, 2, 3, 4`.
+
+The sound saves only the operator OP shows: the Digitakt has no spare
+saved storage per sound, so the other three live in RAM. They survive
+pattern changes, but power-off or loading a project resets them to
+defaults. TUNE, ALGO and CHAR can be parameter-locked; the per-operator
+controls cannot yet. The normal AMP page controls
 the note envelope: set HOLD to `NOTE` for TRIG LEN to determine when the
 release begins. Use a finite DEC to hear that release. DEC `INF` can keep
 the sound going indefinitely. Retriggering chokes the previous voice on

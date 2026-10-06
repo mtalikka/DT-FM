@@ -51,30 +51,38 @@ static void probe(const char *name, struct ds_params p)
 
 int main(void)
 {
-    struct ds_params p = {180, 64, 64, 16, 80, 32, 64, 127, 0, 0};
+    struct ds_params p = {0};
+    p.phase_inc = 180;
+    p.feedback = 32;
+    p.tone = 64;
+    p.velocity = 127;
+    p.op[0] = (struct ds_op_params){16, 127, 0, 127};
+    p.op[1] = (struct ds_op_params){16, 64, 0, 90};
+    p.op[2] = (struct ds_op_params){36, 40, 0, 70};
+    p.op[3] = (struct ds_op_params){16, 30, 0, 60};
 
     probe("neutral", p);
 
-    p.ratio = 24;
-    p.index = 96;
+    p.op[1].ratio = 24;
+    p.op[1].level = 96;
     probe("low-ratio bell", p);
 
-    p.ratio = 112;
-    p.index = 112;
+    p.op[1].ratio = 112;
+    p.op[1].level = 112;
     p.feedback = 96;
     probe("bright noisy", p);
 
-    p.ratio = 80;
-    p.index = 100;
-    p.attack = 127;
-    p.decay = 32;
+    p.op[1].ratio = 80;
+    p.op[1].level = 100;
+    p.op[0].attack = 127;
+    p.op[0].decay = 32;
     p.tone = 24;
     probe("slow attack dark", p);
 
-    p.ratio = 32;
-    p.index = 72;
-    p.attack = 8;
-    p.decay = 112;
+    p.op[1].ratio = 32;
+    p.op[1].level = 72;
+    p.op[0].attack = 8;
+    p.op[0].decay = 112;
     p.feedback = 12;
     p.tone = 112;
     probe("pluck bright", p);

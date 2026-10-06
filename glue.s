@@ -44,8 +44,9 @@ ds_icon_mask:
         .equ P_TONE,0x8b
         .section .bss,"aw"
         .balign 4
-        .globl ds_page_m
+        .globl ds_page_m,ds_d_turned
 ds_page_m: .long 0
+ds_d_turned: .long 0
 ds_lay_ok: .long 0
 ds_lay: .space 44
 ds_txt: .space 12
@@ -260,6 +261,7 @@ ds_samp_chk0:
         moveq #DS_ID,%d1
         cmp.l ds_page_m,%d1
         bne.s 8f
+        move.b %d1,ds_d_turned
         moveq #1,%d1
         rts
 8:      moveq #0,%d1
@@ -317,7 +319,7 @@ ds_val_text:
         cmpi.l #P_INDEX,%d0
         beq.s 7f
         cmpi.l #P_DECAY,%d0
-        beq.s 4f
+        beq.s 5f
         cmpi.l #P_FEEDBACK,%d0
         beq.s 4f
         cmpi.l #P_ATTACK,%d0
@@ -327,7 +329,7 @@ ds_val_text:
 5:      move.l #ds_fmt_u7,%a0
         bra.s 3f
 4:
-        move.l #ds_fmt_time,%a0
+        move.l #ds_fmt_decay,%a0
         bra.s 3f
 6:
         move.l #ds_fmt_op,%a0
@@ -356,7 +358,7 @@ ds_pop_text:
         cmpi.l #P_INDEX,%d0
         beq.s 7f
         cmpi.l #P_DECAY,%d0
-        beq.s 4f
+        beq.s 5f
         cmpi.l #P_FEEDBACK,%d0
         beq.s 4f
         cmpi.l #P_ATTACK,%d0
@@ -366,7 +368,7 @@ ds_pop_text:
 5:      move.l #ds_fmt_u7,%a0
         bra.s 3f
 4:
-        move.l #ds_fmt_time,%a0
+        move.l #ds_fmt_decay,%a0
         bra.s 3f
 6:
         move.l #ds_fmt_op,%a0
@@ -387,16 +389,16 @@ ds_pop_text:
         cmpi.l #164,%d1
         jmp 0x400657f8
         .balign 4
-ds_short_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_index,ds_s_attack,ds_s_decay,ds_s_char
-ds_long_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_index,ds_l_attack,ds_l_decay,ds_l_char
-ds_chooser_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_index,ds_l_attack,ds_l_decay,ds_l_char
-ds_overview_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_index,ds_s_attack,ds_s_decay,ds_s_char
-ds_range_tab: .long 0x7f00,0x0000,0x7f00,0x4000,0x1f00,0x0000,0x7f00,0x5000,0x7f00,0x1000,0x7f00,0x5000,0x7f00,0x4000
+ds_short_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_level,ds_s_attack,ds_s_decay,ds_s_char
+ds_long_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_level,ds_l_attack,ds_l_decay,ds_l_char
+ds_chooser_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_level,ds_l_attack,ds_l_decay,ds_l_char
+ds_overview_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_level,ds_s_attack,ds_s_decay,ds_s_char
+ds_range_tab: .long 0x7f00,0x0000,0x7f00,0x1000,0x1f00,0x0000,0x7f00,0x7f00,0x7f00,0x0000,0x7f00,0x7f00,0x7f00,0x4000
 ds_s_tune: .asciz "TUNE"
 ds_s_algo: .asciz "ALGO"
 ds_s_ratio: .asciz "RATIO"
 ds_s_op: .asciz "OP"
-ds_s_index: .asciz "INDEX"
+ds_s_level: .asciz "LEVEL"
 ds_s_attack: .asciz "ATTK"
 ds_s_decay: .asciz "DECAY"
 ds_s_char: .asciz "CHAR"
@@ -404,7 +406,7 @@ ds_l_tune: .asciz "Tune"
 ds_l_algo: .asciz "Algorithm"
 ds_l_ratio: .asciz "Ratio"
 ds_l_op: .asciz "Operator"
-ds_l_index: .asciz "Index"
+ds_l_level: .asciz "Level"
 ds_l_attack: .asciz "Attack"
 ds_l_decay: .asciz "Decay"
 ds_l_char: .asciz "Character"
