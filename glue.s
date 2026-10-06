@@ -216,6 +216,7 @@ ds_is_control:
         rts
 8:      moveq #0,%d1
         rts
+        .equ NUM_BOX,0x400607fa      | SAMP's knob: (fn, value, canvas, x, y, flag)
         .globl ds_knob_gfx
 ds_knob_gfx:
         move.l 8(%sp),%d0
@@ -225,14 +226,25 @@ ds_knob_gfx:
         beq.s 2f
         cmpi.l #P_SAMP,%d0
         bne.s 1f
-        move.l 12(%sp),%d0            | OP: four positions, as Sophie's MODEL
+        move.l 12(%sp),%d0            | OP: its number in SAMP's box
+        lsr.l #8,%d0
+        andi.l #0x7f,%d0
         lsr.l #3,%d0
         moveq #3,%d1
         cmp.l %d1,%d0
         bls.s 3f
         move.l %d1,%d0
-3:      mulu.w #42,%d0
-        move.l %d0,12(%sp)
+3:      addq.l #1,%d0
+        lsl.l #8,%d0
+        move.l 16(%sp),-(%sp)         | flag, y, x, canvas: fresh slots,
+        move.l 36(%sp),-(%sp)         | as NUM_BOX rewrites its own
+        move.l 36(%sp),-(%sp)
+        move.l 36(%sp),-(%sp)
+        move.l %d0,-(%sp)
+        clr.l -(%sp)
+        jsr NUM_BOX
+        lea 24(%sp),%sp
+        rts
 1:      move.l #P_INDEX,%d0
         move.l %d0,8(%sp)
 2:      lea -20(%sp),%sp
