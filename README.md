@@ -90,7 +90,7 @@ Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 ## Install: no compiler required
 
 You need only the prebuilt
-[DT-FM mod](release/dt-fm-1.0.0.elemod),
+[DT-FM mod](https://github.com/mtalikka/DT-FM/releases/download/v1.0.0/dt-fm-1.0.0.elemod),
 [elekloader](https://github.com/irpina/elekloader/releases/latest), and your
 own original Digitakt Mk1 OS 1.53 `.syx`
 The `.elemod` contains this project's code, **not** Elektron's firmware.
