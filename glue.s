@@ -224,7 +224,16 @@ ds_knob_gfx:
         beq.s 2f
         cmpi.l #P_TUNE,%d0
         beq.s 2f
-        cmpi.l #P_SAMP,%d0
+        cmpi.l #P_RATIO,%d0
+        bne.s 4f
+        move.l 32(%sp),-(%sp)         | ds_algo_gfx(value, canvas, x, y)
+        move.l 32(%sp),-(%sp)
+        move.l 32(%sp),-(%sp)
+        move.l 24(%sp),-(%sp)
+        jsr ds_algo_gfx
+        lea 16(%sp),%sp
+        rts
+4:      cmpi.l #P_SAMP,%d0
         bne.s 1f
         move.l 12(%sp),%d0            | OP: its number in SAMP's box
         lsr.l #8,%d0

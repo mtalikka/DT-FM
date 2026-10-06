@@ -23,7 +23,7 @@ operation is **not** claimed.
 | SRC knob | Control | What it does |
 | --- | --- | --- |
 | A | TUNE | Pitch |
-| B | ALGO | Operator routing (1-8, below) |
+| B | ALGO | Operator routing (1-8, below); its knob draws the routing |
 | C | RATIO | Selected operator's frequency ratio, 0.25 to 16 |
 | D | OP | Which operator (1-4) RATIO, LEVEL, ATTK and DECAY edit; its knob shows the number |
 | E | LEVEL | Selected operator's level: volume as a carrier, depth as a modulator |
