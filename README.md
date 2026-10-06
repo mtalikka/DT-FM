@@ -20,6 +20,12 @@ In hardware testing, four DT-FM tracks playing together used about 95% CPU
 without FAST AUDIO and about 85% with it. Eight-track operation is **not**
 claimed.
 
+## AI Disclaimer
+
+This fork of digisophie has been created with the assistance of LLM agents. I don't know how digisophie was made, but pretty much all commits after 961c39ce have been "vibe-coded". That is to say, a human provided the prompts, design decisions, and performed testing on the hardware, but all of the heavy lifting, DSP coding, assembly hacking, etc., was done by an AI. Heck, all but this disclaimer have been generated and/or modified by AI. I make no promises to proofread or improve anything, so use this modified firmware at entirely your own risk. I am aware of the ethical implications of using AI and fully deserve any criticism related to that. However, I already am basically forced to use AI at work, so my hands are already dirty, so to speak. I am not proud of outsourcing my thinking and learning to an LLM, but if it were not for these tools, stuff like this probably just wouldn't get made. My idea with releasing this is to minimize the damage caused by this foolish endeavour by sharing my results with others, so that they don't have to go and do the same thing.
+
+I have the utmost respect for people that do low-level hacking and write audio code - you are probably some of the smartest people out there. I am not one of you. I'm just an idiot who wanted a digitone but couldn't afford one at the moment, and seeing the newly-released custom firmware made for the MK1, wondered if it might be possible to make an FM synth on the DT.
+
 ## Controls
 
 | SRC knob | Control | What it does |
