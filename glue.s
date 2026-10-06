@@ -1,5 +1,5 @@
 | SPDX-License-Identifier: MIT
-| FM2OP custom machine registration and post-playback render hook.
+| DT-FM custom machine registration and post-playback render hook.
         .section .run, "ax"
         .globl ds_inject_s
 ds_inject_s:
@@ -16,8 +16,8 @@ ds_inject_s:
         .globl ds_machine
 ds_machine:
         .long   7, ds_name, ds_short, ds_icon_bmp, 3, 7
-ds_name: .asciz "FM2OP"
-ds_short: .asciz "FM2"
+ds_name: .asciz "DT-FM"
+ds_short: .asciz "DTFM"
         .balign 4
 ds_icon_bmp:
         .long BMP_VT, 11, 7, 1, ds_icon_px, ds_icon_mask, 0
@@ -30,7 +30,7 @@ ds_icon_mask:
         .long 0xfe000000,0xfe000000,0xfe000000,0x00000000
         .long 0x00000000,0x00000000,0x00000000
 
-| Dedicated FM2OP SRC layout and presentation.  All eight controls retain
+| Dedicated DT-FM SRC layout and presentation.  All eight controls retain
 | SLICE's persistent storage slots, preserving locks and external control.
         .equ DS_ID,7
         .equ LAY_SLICE,0x4197cf5c
@@ -104,7 +104,7 @@ ds_lab_long:
 
 | The LFO destination renderer reads the shared SLICE parameter descriptor
 | directly, bypassing ds_lab_short.  Keep its target ID and drawing path,
-| replacing only the displayed name while Sophie's layout is active.
+| replacing only the displayed name while DT-FM's layout is active.
         .globl ds_lfo_label
 ds_lfo_label:
         moveq #DS_ID,%d1
@@ -125,7 +125,7 @@ ds_lfo_label:
         jmp 0x40060b94             | original descriptor lookup
 
 | The destination popup formats rows separately as MACHINE:Parameter.
-| Its first and fallback draws both need Sophie's full parameter names.
+| Its first and fallback draws both need DT-FM's full parameter names.
 ds_chooser_name:
         move.l %d1,-(%sp)
         move.l %a0,-(%sp)

@@ -199,6 +199,6 @@ int main(void)
     ds_voice_render(&vb, &p, 1, c, DS_BLOCK_SIZE);
     assert(!vb.sleeping && c[0] == 0 && energy(c, DS_BLOCK_SIZE) > 0);
 
-    puts("ok: FM2OP fixed-point engine");
+    puts("ok: DT-FM fixed-point engine");
     return 0;
 }

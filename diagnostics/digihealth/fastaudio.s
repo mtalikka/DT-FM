@@ -128,7 +128,7 @@ fa_tick:
         moveq   #1, %d0
         move.l  %d0, r_fault
         clr.b   fast
-84:     | Diagnostic Sophie build: leave FAST AUDIO off unless selected.
+84:     | Diagnostic DT-FM build: leave FAST AUDIO off unless selected.
 85:     rts
 
 | FAST AUDIO on by default: at the second one-second tick (two seconds

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT */
-/* Standalone continuity diagnostic for the fixed-point FM2OP renderer. */
+/* Standalone continuity diagnostic for the fixed-point DT-FM renderer. */
 #include <stdint.h>
 #include <stdio.h>
 #include "../sophie.h"

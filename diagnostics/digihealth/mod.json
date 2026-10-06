@@ -2,7 +2,7 @@
  "id": "digihealth", "version": "1.0.1",
  "title": "digihealth diagnostic", "category": "Performance", "author": "irpina; diagnostic default by Codex",
  "license": "GPL-2.0-or-later",
- "description": "Diagnostic build of digihealth for SOPHIE. SYSTEM INFO shows CPU, DSP, RAM and free sample memory in the top bar. FAST AUDIO is off by default and may be enabled manually for a separate comparison. The read-only USB diagnostics channel uses SysEx device 0x7D.",
+ "description": "Diagnostic build of digihealth for DT-FM. SYSTEM INFO shows CPU, DSP, RAM and free sample memory in the top bar. FAST AUDIO is off by default and may be enabled manually for a separate comparison. The read-only USB diagnostics channel uses SysEx device 0x7D.",
  "device": "digitakt-mk1", "os": "1.53",
  "sources": ["fastaudio.s", "sysinfo.s"],
  "name_string": "digihealth",

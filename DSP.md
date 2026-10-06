@@ -1,6 +1,6 @@
-# Digitakt Mk1 FM2OP DSP reference
+# Digitakt Mk1 DT-FM DSP reference
 
-This note records the parts of Digitakt Mk1 OS 1.53 that FM2OP actually uses,
+This note records the parts of Digitakt Mk1 OS 1.53 that DT-FM actually uses,
 the renderer's fixed-point choices, and the remaining performance limit. It
 is for developers changing the synth, not a substitute for the stock OS or
 hardware testing. Addresses below come from this project's OS 1.53 adapter
@@ -9,16 +9,16 @@ and patch manifest; they must not be reused on another firmware version.
 The [RingTone DSP reference](https://github.com/DigiAlchemydsp/RingTone/blob/main/DSP.md)
 inspired this layout. RingTone documents the **Digitone Mk1 OS 1.43**, whose
 second CPU runs its FM voices. Its addresses, shared-memory layout and patch
-sites do not describe the Digitakt or FM2OP.
+sites do not describe the Digitakt or DT-FM.
 
 ## Audio path
 
-FM2OP is a custom SRC machine, ID 7. Core 2.1 registers it; `glue.s` hooks
+DT-FM is a custom SRC machine, ID 7. Core 2.1 registers it; `glue.s` hooks
 the Digitakt's audio render at `0x40077fba` and calls `ds_inject` after the
-stock source work. For each FM2OP track, `digitakt.c` reads its current
+stock source work. For each DT-FM track, `digitakt.c` reads its current
 controls and trigger state, writes 32 mono `int32_t` source samples to the
 track buffer at `0x80001a18 + 128*track`, then lets the stock AMP, filter,
-mixer and sends process them. FM2OP uses the SRC page as TUNE, ALGO, RATIO,
+mixer and sends process them. DT-FM uses the SRC page as TUNE, ALGO, RATIO,
 OP, LEVEL, ATTK, DECAY and CHAR. OP (the stock SAMP slot) picks the operator
 that RATIO, LEVEL, ATTK and DECAY show; `ds_tick` keeps the other operators
 in RAM and swaps them onto those knobs when OP turns.
@@ -39,9 +39,9 @@ The common soft clip uses a 65-point lookup with linear interpolation.
 
 The slowly moving controls update every four synth samples. Feedback and
 oscillators still advance every synth sample. The AMP envelope remains the
-stock Digitakt envelope: an active phase keeps FM2OP awake even if its
+stock Digitakt envelope: an active phase keeps DT-FM awake even if its
 instantaneous level crosses zero. After an idle/released envelope is quiet
-for 32 blocks, FM2OP fades its source over 128 synth samples and then skips
+for 32 blocks, DT-FM fades its source over 128 synth samples and then skips
 synthesis.
 
 The 0–127 control-to-Q15 conversion is exact using `258*x + (x == 127)`:

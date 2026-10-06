@@ -1,8 +1,8 @@
 # digihealth
 
-> This is the upstream README retained for attribution. The Sophie copy
+> This is the upstream README retained for attribution. The DT-FM copy
 > changes FAST AUDIO to **off by default**; the upstream descriptions below
-> saying “on by default” do not apply to the Sophie build. See
+> saying “on by default” do not apply to the DT-FM build. See
 > [the local diagnostic notes](../README.md).
 
 A performance and diagnostics mod for the Digitakt (mk1), OS 1.53. It adds
