@@ -267,6 +267,50 @@ ds_samp_chk0:
 8:      moveq #0,%d1
 9:      rts
 
+| SERIALIZE(data, project, ...) and DESERIALIZE(project, data, cb), hooked at
+| entry: the hidden operators ride in the storage block's unused header gap.
+        .equ SERIALIZE,0x4007f30a
+        .equ DESERIALIZE,0x4007efe8
+        .globl ds_proj_save,ds_proj_load
+ds_proj_save:
+        move.l 20(%sp),-(%sp)
+        move.l 20(%sp),-(%sp)
+        move.l 20(%sp),-(%sp)
+        move.l 20(%sp),-(%sp)
+        move.l 20(%sp),-(%sp)
+        bsr.s 1f
+        lea 20(%sp),%sp
+        move.l %d0,-(%sp)             | garbage when no progress callback
+        tst.l 8(%sp)                  | data
+        beq.s 2f
+        tst.l 12(%sp)                 | project
+        beq.s 2f
+        move.l 8(%sp),-(%sp)
+        jsr ds_proj_put
+        addq.l #4,%sp
+2:      move.l (%sp)+,%d0
+        rts
+1:      lea -44(%sp),%sp              | the replaced entry
+        movem.l %d2-%d7/%a2-%a6,(%sp)
+        jmp SERIALIZE+8
+ds_proj_load:
+        move.l 12(%sp),-(%sp)
+        move.l 12(%sp),-(%sp)
+        move.l 12(%sp),-(%sp)
+        bsr.s 1f
+        lea 12(%sp),%sp
+        move.l %d0,-(%sp)
+        tst.b %d0
+        beq.s 2f
+        move.l 12(%sp),-(%sp)         | data
+        jsr ds_proj_get
+        addq.l #4,%sp
+2:      move.l (%sp)+,%d0
+        rts
+1:      lea -36(%sp),%sp              | the replaced entry
+        movem.l %d2-%d5/%a2-%a6,(%sp)
+        jmp DESERIALIZE+8
+
 | Range lookup is reached by display, stepper, setter and validator.
         .globl ds_prange,ds_prange_f
 ds_prange:

@@ -32,7 +32,7 @@ typedef unsigned long u32;
 #define DS_OP_INIT {{16, 127, 0, 127}, {16, 80, 0, 90}, {36, 40, 0, 70}, {16, 30, 0, 60}}
 
 static struct ds_voice ds_voices[TRACKS];
-/* Knobs C, E, F, G edit the selected operator; the others are RAM-only. */
+/* Knobs C, E, F, G edit the selected operator; ds_op keeps all four per track. */
 static const u8 ds_op_slot[4] = {0x13, 0x15, 0x16, 0x17};
 static const u8 ds_op_init[DS_OPS][4] = DS_OP_INIT;
 static u8 ds_op[TRACKS][DS_OPS][4] = {
@@ -41,7 +41,6 @@ static u8 ds_op[TRACKS][DS_OPS][4] = {
 };
 static u8 *ds_snd[TRACKS];
 static u8 ds_sel[TRACKS];
-static u8 ds_ready[TRACKS];
 extern volatile u8 ds_d_turned;
 
 char *ds_fmt_ratio(char *out, s32 value)
@@ -208,22 +207,15 @@ void ds_inject(void)
 static u32 ds_s7(u8 *s, u32 slot)
 { return ((u32)(u16)S_PARAM(s, slot) >> 8) & 0x7fu; }
 
+static void ds_wc_sync(void);
+
 void ds_tick(void *ctrl)
 {
-    u32 t, k, j, sel, redraw = 0;
+    u32 t, j, sel, redraw = 0;
     for (t = 0; t < TRACKS; ++t) {
         u8 *s = SOUND(t);
         u8 cur[4];
-        if (!s || s[126] != DS_MACHINE) {
-            ds_ready[t] = 0;
-            continue;
-        }
-        if (!ds_ready[t]) {
-            for (k = 0; k < DS_OPS; ++k)
-                for (j = 0; j < 4u; ++j) ds_op[t][k][j] = ds_op_init[k][j];
-            ds_snd[t] = 0;
-            ds_ready[t] = 1;
-        }
+        if (!s || s[126] != DS_MACHINE) continue;
         sel = ds_s7(s, S_OP) >> 3;
         if (sel > 3u) sel = 3u;
         for (j = 0; j < 4u; ++j) cur[j] = (u8)ds_s7(s, ds_op_slot[j]);
@@ -242,4 +234,60 @@ void ds_tick(void *ctrl)
     }
     ds_d_turned = 0;
     if (redraw) *((volatile u8 *)ctrl + 0x20) = 1;
+    ds_wc_sync();
+}
+
+/* Project block +0x20..+0x200, skipped by SERIALIZE and DESERIALIZE, in
+ * core-dn1's projdata layout: 'ELKP', then tag, size, bytes, zero tag. */
+#define PROJ_GAP 0x20
+#define PROJ_MAGIC 0x454c4b50u
+#define PROJ_TAG 0x464d324fu
+#define PROJ_HEAD 0xbeefbaceu
+/* The power-up working copy: dumped to NAND at power-off and DESERIALIZEd
+ * at boot, but re-serialized only on project load, so ds_wc_sync keeps our
+ * gap in it current. The COKI checksum covers only its header. */
+#define WC_DATA ((u8 *)0x406481f8)
+
+static u8 ds_live;     /* ds_op came from (or went to) a project */
+
+void ds_proj_put(u8 *data)
+{
+    u32 *w = (u32 *)(data + PROJ_GAP);
+    const u8 *src = &ds_op[0][0][0];
+    u8 *dst = (u8 *)(w + 3);
+    u32 i;
+    ds_live = 1;
+    w[0] = PROJ_MAGIC;
+    w[1] = PROJ_TAG;
+    w[2] = sizeof ds_op;
+    for (i = 0; i < sizeof ds_op; ++i) dst[i] = src[i];
+    w[3 + sizeof ds_op / 4] = 0;
+}
+
+void ds_proj_get(const u8 *data)
+{
+    const u32 *w = (const u32 *)(data + PROJ_GAP);
+    const u8 *src = (const u8 *)(w + 3);
+    u8 *dst = &ds_op[0][0][0];
+    u32 i;
+    ds_live = 1;
+    if (w[0] == PROJ_MAGIC && w[1] == PROJ_TAG && w[2] == sizeof ds_op)
+        for (i = 0; i < sizeof ds_op; ++i) dst[i] = src[i];
+    else
+        for (i = 0; i < sizeof ds_op; ++i) dst[i] = (&ds_op_init[0][0])[i & 15u];
+}
+
+/* Not before the boot restore has run (ds_live), so defaults never
+ * overwrite the persisted block. */
+static void ds_wc_sync(void)
+{
+    const u32 *w = (const u32 *)(WC_DATA + PROJ_GAP);
+    const u8 *a = (const u8 *)(w + 3), *b = &ds_op[0][0][0];
+    u32 i;
+    if (!ds_live || *(const u32 *)WC_DATA != PROJ_HEAD) return;
+    if (w[0] == PROJ_MAGIC && w[1] == PROJ_TAG && w[2] == sizeof ds_op) {
+        for (i = 0; i < sizeof ds_op && a[i] == b[i]; ++i) {}
+        if (i == sizeof ds_op) return;
+    }
+    ds_proj_put(WC_DATA);
 }

@@ -35,11 +35,13 @@ Algorithms, where `>` means "modulates": 1 `4>3>2>1`, 2 `(3+4)>2>1`,
 3 `(2 + 4>3)>1`, 4 `(2+3+4)>1`, 5 `2>1, 4>3`, 6 `4>(1, 2, 3)`,
 7 `1, 2, 4>3`, 8 `1, 2, 3, 4`.
 
-The sound saves only the operator OP shows: the Digitakt has no spare
-saved storage per sound, so the other three live in RAM. They survive
-pattern changes, but power-off or loading a project resets them to
-defaults. TUNE, ALGO and CHAR can be parameter-locked; the per-operator
-controls cannot yet. The normal AMP page controls
+The sound saves only the operator OP shows; the other three are kept per
+track and saved with the project, in a gap of the project's storage block
+that the stock OS neither writes nor reads. They also survive a power cycle,
+like any unsaved edit. They follow the track across
+patterns, but not into the sound pool or saved kits, and a project saved
+without FM2OP starts them at defaults. TUNE, ALGO and CHAR can be
+parameter-locked; the per-operator controls cannot yet. The normal AMP page controls
 the note envelope: set HOLD to `NOTE` for TRIG LEN to determine when the
 release begins. Use a finite DEC to hear that release. DEC `INF` can keep
 the sound going indefinitely. Retriggering chokes the previous voice on

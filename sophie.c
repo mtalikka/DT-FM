@@ -7,6 +7,7 @@
 
 #define Q15 32767
 #define ENV_ONE (1u << 24)
+#define DS_CHUNK (DS_BLOCK_SIZE / 2)	/* synth samples per control step */
 
 static int32_t ds_clamp(int32_t x, int32_t lo, int32_t hi)
 { return x < lo ? lo : (x > hi ? hi : x); }
@@ -14,10 +15,10 @@ static int32_t ds_clamp(int32_t x, int32_t lo, int32_t hi)
 static int32_t ds_mul(int32_t a, int32_t b)
 { return (a * b) >> 15; }
 
-static int32_t ds_slew8(int32_t value, int32_t target)
+static int32_t ds_slew2(int32_t value, int32_t target)
 {
 	int32_t delta = target - value;
-	return value + (delta > 0 ? (delta + 7) / 8 : -((-delta + 7) / 8));
+	return value + (delta > 0 ? (delta + 1) >> 1 : -((-delta + 1) >> 1));
 }
 
 /* 1024-point sine in Q15, one full turn. */
@@ -63,38 +64,38 @@ const uint16_t ds_ratio_centi[DS_RATIOS] = {
 	1500, 1600
 };
 
-/* Per 6 kHz control tick: attack 1 ms..2 s to full scale (0 is instant);
- * decay time constant 3 ms..3 s as a Q20 fraction (127 holds). */
+/* Per control step (1.5 kHz): attack 1 ms..2 s to full scale (0 is instant);
+ * decay time constant 3 ms..3 s as a Q16 fraction (127 holds). */
 static const uint32_t ds_attack_step[128] = {
-	16777216, 2796203, 2632510, 2478400, 2333311, 2196717, 2068118, 1947048,
-	1833066, 1725756, 1624728, 1529615, 1440070, 1355766, 1276398, 1201676,
-	1131329, 1065100, 1002747, 944046, 888780, 836750, 787766, 741649,
-	698232, 657357, 618874, 582645, 548536, 516424, 486192, 457730,
-	430934, 405706, 381956, 359596, 338545, 318726, 300067, 282501,
-	265963, 250393, 235735, 221935, 208942, 196711, 185195, 174354,
-	164147, 154537, 145491, 136973, 128955, 121406, 114298, 107607,
-	101308, 95377, 89794, 84537, 79588, 74929, 70543, 66413,
-	62525, 58865, 55419, 52174, 49120, 46245, 43537, 40989,
-	38589, 36330, 34203, 32201, 30316, 28541, 26870, 25297,
-	23816, 22422, 21109, 19874, 18710, 17615, 16584, 15613,
-	14699, 13838, 13028, 12266, 11548, 10872, 10235, 9636,
-	9072, 8541, 8041, 7570, 7127, 6710, 6317, 5947,
-	5599, 5271, 4963, 4672, 4399, 4141, 3899, 3670,
-	3456, 3253, 3063, 2884, 2715, 2556, 2406, 2265,
-	2133, 2008, 1890, 1780, 1675, 1577, 1485, 1398
+	16777216, 11184811, 10530039, 9913599, 9333245, 8786867, 8272473, 7788193,
+	7332264, 6903025, 6498914, 6118460, 5760278, 5423065, 5105593, 4806706,
+	4525316, 4260399, 4010990, 3776182, 3555120, 3346999, 3151062, 2966595,
+	2792928, 2629426, 2475497, 2330578, 2194144, 2065696, 1944768, 1830919,
+	1723735, 1622825, 1527823, 1438383, 1354178, 1274903, 1200269, 1130004,
+	1063852, 1001573, 942940, 887739, 835770, 786843, 740780, 697414,
+	656587, 618149, 581962, 547893, 515819, 485622, 457194, 430429,
+	405231, 381508, 359175, 338148, 318352, 299716, 282170, 265652,
+	250100, 235459, 221675, 208698, 196480, 184978, 174149, 163954,
+	154356, 145320, 136813, 128804, 121263, 114165, 107481, 101189,
+	95265, 89688, 84438, 79495, 74841, 70460, 66335, 62452,
+	58796, 55354, 52113, 49063, 46190, 43486, 40941, 38544,
+	36287, 34163, 32163, 30280, 28508, 26839, 25268, 23788,
+	22396, 21085, 19850, 18688, 17594, 16564, 15595, 14682,
+	13822, 13013, 12251, 11534, 10859, 10223, 9625, 9061,
+	8531, 8031, 7561, 7119, 6702, 6310, 5940, 5592
 };
 static const uint16_t ds_decay_coef[128] = {
-	58254, 55146, 52205, 49420, 46783, 44287, 41925, 39688, 37571, 35567, 33669, 31873,
-	30173, 28563, 27039, 25597, 24231, 22939, 21715, 20556, 19460, 18422, 17439, 16509,
-	15628, 14794, 14005, 13258, 12550, 11881, 11247, 10647, 10079, 9541, 9032, 8551,
-	8094, 7663, 7254, 6867, 6500, 6154, 5825, 5515, 5220, 4942, 4678, 4429,
-	4192, 3969, 3757, 3557, 3367, 3187, 3017, 2856, 2704, 2560, 2423, 2294,
-	2171, 2056, 1946, 1842, 1744, 1651, 1563, 1479, 1400, 1326, 1255, 1188,
-	1125, 1065, 1008, 954, 903, 855, 809, 766, 725, 687, 650, 615,
-	583, 551, 522, 494, 468, 443, 419, 397, 376, 356, 337, 319,
-	302, 286, 270, 256, 242, 229, 217, 206, 195, 184, 174, 165,
-	156, 148, 140, 133, 126, 119, 112, 106, 101, 95, 90, 86,
-	81, 77, 73, 69, 65, 62, 58, 0
+	13059, 12433, 11834, 11260, 10712, 10187, 9686, 9207, 8751, 8315, 7899, 7503,
+	7125, 6765, 6423, 6097, 5786, 5491, 5210, 4943, 4689, 4447, 4218, 4000,
+	3793, 3596, 3409, 3232, 3064, 2904, 2752, 2608, 2472, 2342, 2220, 2103,
+	1993, 1888, 1789, 1694, 1605, 1521, 1440, 1364, 1292, 1224, 1159, 1098,
+	1040, 985, 933, 883, 836, 792, 750, 710, 673, 637, 603, 571,
+	541, 512, 485, 459, 435, 411, 390, 369, 349, 331, 313, 296,
+	281, 266, 251, 238, 225, 213, 202, 191, 181, 171, 162, 154,
+	145, 138, 130, 123, 117, 111, 105, 99, 94, 89, 84, 80,
+	75, 71, 68, 64, 61, 57, 54, 51, 49, 46, 44, 41,
+	39, 37, 35, 33, 31, 30, 28, 27, 25, 24, 23, 21,
+	20, 19, 18, 17, 16, 15, 15, 0
 };
 
 struct ds_algo {
@@ -126,6 +127,46 @@ static int32_t ds_level_q15(uint8_t knob)
 {
 	int32_t q = ds_u7_q15(knob & 0x7fu);
 	return ds_mul(q, q);
+}
+
+/* A full-scale modulator deviates the phase by two cycles. */
+static uint32_t ds_op_chunk(uint32_t ph, uint32_t inc, int32_t amp, int32_t step,
+			    const int32_t *mod, int32_t *o, uint32_t len)
+{
+	uint32_t s;
+	if (mod) {
+		for (s = 0; s < len; ++s) {
+			ph += inc;
+			o[s] = (ds_sin(ph + ((uint32_t)mod[s] << 18)) * amp) >> 15;
+			amp += step;
+		}
+	} else {
+		for (s = 0; s < len; ++s) {
+			ph += inc;
+			o[s] = (ds_sin(ph) * amp) >> 15;
+			amp += step;
+		}
+	}
+	return ph;
+}
+
+static uint32_t ds_fb_chunk(struct ds_voice *v, uint32_t ph, uint32_t inc,
+			    int32_t amp, int32_t step, int32_t fb_amt,
+			    int32_t *o, uint32_t len)
+{
+	int32_t z1 = v->fb_z1, z2 = v->fb_z2;
+	uint32_t s;
+	for (s = 0; s < len; ++s) {
+		int32_t fb = (((z1 + z2) >> 1) * fb_amt) >> 16;
+		ph += inc;
+		z2 = z1;
+		z1 = (ds_sin(ph + ((uint32_t)fb << 18)) * amp) >> 15;
+		o[s] = z1;
+		amp += step;
+	}
+	v->fb_z1 = z1;
+	v->fb_z2 = z2;
+	return ph;
 }
 
 void ds_voice_init(struct ds_voice *v)
@@ -178,15 +219,11 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 	int32_t feedback_target = ds_u7_q15(p->feedback);
 	int32_t tone_target = ds_u7_q15(p->tone);
 	int32_t velocity_target = ds_u7_q15(p->velocity);
-	uint32_t op_inc[DS_OPS];
-	int32_t feedback_amt = 0;
-	int32_t tone_rate = 0;
 	uint32_t i, k;
 
 	for (k = 0; k < DS_OPS; ++k) {
 		ratio_target[k] = ds_ratio_q12(p->op[k].ratio);
 		level_target[k] = ds_level_q15(p->op[k].level);
-		op_inc[k] = 0;
 	}
 
 	if (trigger) {
@@ -204,8 +241,10 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 			v->tail = 0;
 			v->transition = 0;
 		}
-		for (k = 0; k < DS_OPS; ++k)
+		for (k = 0; k < DS_OPS; ++k) {
 			v->phase[k] = v->env[k] = 0;
+			v->amp[k] = 0;
+		}
 		v->rising = (1u << DS_OPS) - 1u;
 		v->fb_z1 = v->fb_z2 = 0;
 		v->tone_z = 0;
@@ -213,77 +252,111 @@ void ds_voice_render(struct ds_voice *v, const struct ds_params *p,
 		v->active = 1;
 	}
 
-	for (i = 0; i < n; i += 2) {
-		int32_t o[DS_OPS];
-		int32_t mix = 0;
-		int32_t y;
+	for (i = 0; i < n; i += 2 * DS_CHUNK) {
+		static const int32_t zero[DS_CHUNK];
+		int32_t buf[DS_OPS][DS_CHUNK], sum[DS_CHUNK];
+		int32_t *o = out + i, *acc = 0;
+		const int32_t *mix;
+		uint32_t rem = n - i;
+		uint32_t len = rem < 2 * DS_CHUNK ? (rem + 1) / 2 : DS_CHUNK;
+		uint32_t live = 0, s, j, tr, fade;
+		int32_t feedback_amt, tone_rate, cgain, z, last;
 
 		if (!v->active) {
-			out[i] = 0;
-			if (i + 1 < n) out[i + 1] = 0;
+			for (s = 0; s < rem && s < 2 * DS_CHUNK; ++s) o[s] = 0;
 			continue;
 		}
 
-		if ((i & 7u) == 0) {
-			for (k = 0; k < DS_OPS; ++k) {
-				uint32_t env = v->env[k];
-				v->ratio_s[k] = ds_slew8(v->ratio_s[k], ratio_target[k]);
-				v->level_s[k] = ds_slew8(v->level_s[k], level_target[k]);
-				op_inc[k] = (inc * (uint32_t)v->ratio_s[k]) << 5;
-				if (v->rising & (1u << k)) {
-					env += ds_attack_step[p->op[k].attack & 0x7fu];
-					if (env >= ENV_ONE) {
-						env = ENV_ONE;
-						v->rising &= (uint8_t)~(1u << k);
-					}
-				} else {
-					env -= ((env >> 8) * ds_decay_coef[p->op[k].decay & 0x7fu]) >> 12;
-				}
-				v->env[k] = env;
-				v->amp[k] = ((int32_t)(env >> 9) * v->level_s[k]) >> 15;
-			}
-			v->feedback_s = ds_slew8(v->feedback_s, feedback_target);
-			v->tone_s = ds_slew8(v->tone_s, tone_target);
-			v->velocity_s = ds_slew8(v->velocity_s, velocity_target);
-			feedback_amt = ds_mul(v->feedback_s, v->feedback_s);
-			tone_rate = 2048 + ((v->tone_s * 30719) >> 15);
-		}
+		v->feedback_s = ds_slew2(v->feedback_s, feedback_target);
+		v->tone_s = ds_slew2(v->tone_s, tone_target);
+		v->velocity_s = ds_slew2(v->velocity_s, velocity_target);
+		feedback_amt = ds_mul(v->feedback_s, v->feedback_s);
+		tone_rate = 2048 + ((v->tone_s * 30719) >> 15);
+		cgain = ((int32_t)algo->gain_q15 * v->velocity_s) >> 15;
 
+		/* Operator 4 first: its output feeds the operators below it. Levels
+		 * ramp across the block; silent operators only advance their phase. */
 		for (k = DS_OPS; k-- > 0;) {
-			uint32_t m = algo->mods[k];
-			int32_t mod = 0;
-			if (k == DS_OPS - 1u)
-				mod = (((v->fb_z1 + v->fb_z2) >> 1) * feedback_amt) >> 16;
-			if (m & 2u) mod += o[1];
-			if (m & 4u) mod += o[2];
-			if (m & 8u) mod += o[3];
-			v->phase[k] += op_inc[k];
-			/* A full-scale modulator deviates the phase by two cycles. */
-			o[k] = (ds_sin(v->phase[k] + ((uint32_t)mod << 18)) * v->amp[k]) >> 15;
-			if (algo->carriers & (1u << k)) mix += o[k];
-		}
-		v->fb_z2 = v->fb_z1;
-		v->fb_z1 = o[DS_OPS - 1];
-		mix = (mix * (int32_t)algo->gain_q15) >> 15;
+			uint32_t bit = 1u << k, env = v->env[k], op_inc;
+			int32_t a0 = v->amp[k], a1, step;
+			const int32_t *in = 0;
 
-		v->tone_z += ((mix - v->tone_z) * tone_rate) >> 15;
-		y = ds_soft_clip(ds_mul(v->tone_z, v->velocity_s));
+			v->ratio_s[k] = ds_slew2(v->ratio_s[k], ratio_target[k]);
+			v->level_s[k] = ds_slew2(v->level_s[k], level_target[k]);
+			op_inc = (inc * (uint32_t)v->ratio_s[k]) << 5;
+			if (v->rising & bit) {
+				env += ds_attack_step[p->op[k].attack & 0x7fu];
+				if (env >= ENV_ONE) {
+					env = ENV_ONE;
+					v->rising &= (uint8_t)~bit;
+				}
+			} else {
+				env -= ((env >> 8) * ds_decay_coef[p->op[k].decay & 0x7fu]) >> 8;
+				if (env < 8192u) env = 0;
+			}
+			v->env[k] = env;
+			a1 = ((int32_t)(env >> 9) * v->level_s[k]) >> 15;
+			if (algo->carriers & bit) a1 = (a1 * cgain) >> 15;
+			v->amp[k] = a1;
 
-		if (v->transition) {
-			y = (y * (64 - v->transition) + v->tail * v->transition) / 64;
-			v->transition = v->transition > 2 ? v->transition - 2 : 0;
-		}
-		if (v->fade_left) {
-			y = (y * v->fade_left) / 128;
-			if (--v->fade_left == 0) {
-				v->sleeping = 1;
-				v->tail = 0;
-				v->transition = 0;
+			if (!a0 && !a1) {
+				v->phase[k] += op_inc * len;
+				if (k == DS_OPS - 1u) v->fb_z1 = v->fb_z2 = 0;
+				continue;
+			}
+			step = (a1 - a0) / DS_CHUNK;
+			live |= bit;
+			if (k == DS_OPS - 1u) {
+				v->phase[k] = ds_fb_chunk(v, v->phase[k], op_inc, a0, step,
+							  feedback_amt, buf[k], len);
+			} else {
+				for (j = k + 1; j < DS_OPS; ++j) {
+					const int32_t *a = in;
+					if (!(algo->mods[k] & live & (1u << j))) continue;
+					if (!a) {
+						in = buf[j];
+						continue;
+					}
+					for (s = 0; s < len; ++s) sum[s] = a[s] + buf[j][s];
+					in = sum;
+				}
+				v->phase[k] = ds_op_chunk(v->phase[k], op_inc, a0, step,
+							  in, buf[k], len);
+			}
+			if (algo->carriers & bit) {
+				if (!acc) acc = buf[k];
+				else for (s = 0; s < len; ++s) acc[s] += buf[k][s];
 			}
 		}
+		mix = acc ? acc : zero;
 
-		out[i] = ((v->last + y) / 2) * 65536;
-		if (i + 1 < n) out[i + 1] = y * 65536;
-		v->last = v->sleeping ? 0 : y;
+		z = v->tone_z;
+		last = v->last;
+		tr = v->transition;
+		fade = v->fade_left;
+		for (s = 0; s < len; ++s) {
+			int32_t y;
+			z += ((mix[s] - z) * tone_rate) >> 15;
+			y = ds_soft_clip(z);
+			if (tr) {
+				y = (y * (int32_t)(64 - tr) + v->tail * (int32_t)tr) / 64;
+				tr = tr > 2 ? tr - 2 : 0;
+			}
+			if (fade) {
+				y = (y * (int32_t)fade) / 128;
+				if (--fade == 0) {
+					v->sleeping = 1;
+					v->tail = 0;
+					tr = 0;
+				}
+			}
+			o[2 * s] = ((last + y) / 2) * 65536;
+			if (2 * s + 1 < rem) o[2 * s + 1] = y * 65536;
+			last = v->sleeping ? 0 : y;
+		}
+		v->tone_z = z;
+		v->last = last;
+		v->transition = (uint8_t)tr;
+		v->fade_left = (uint8_t)fade;
 	}
 }
