@@ -97,14 +97,14 @@ Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 ## Install: no compiler required
 
 You need only the prebuilt
-[DT-FM mod](release/dt-fm-1.0.1.elemod),
+[DT-FM mod](https://github.com/mtalikka/DT-FM/releases/download/v1.0.0/dt-fm-1.0.0.elemod),
 [elekloader](https://github.com/irpina/elekloader/releases/latest), and your
 own original Digitakt Mk1 OS 1.53 `.syx`
 The `.elemod` contains this project's code, **not** Elektron's firmware.
 You do not need ColdFire tools, Python, or a source checkout to install it.
 
-1. Open elekloader and select your stock OS using **Change stock firmware**.
-2. Choose **Install from file** and select `dt-fm-1.0.1.elemod`.
+1. Open elekloader and select your stock OS using **Add its stock OS file**.
+2. From the mod list, choose **Add your own .elemod** and select `dt-fm-1.0.0.elemod`.
    Enable DT-FM. elekloader's built-in **core 2.1** should enable with it.
    If elekloader still lists the earlier `digisophie` mod (FM2OP), disable
    it: both add machine 7.
@@ -114,10 +114,9 @@ You do not need ColdFire tools, Python, or a source checkout to install it.
    [digihealth diagnostic](release/digihealth-1.0.1.elemod) too. This is
    the configuration used for the earlier S027 hardware test. It adds SYSTEM INFO
    and an opt-in FAST AUDIO setting; without it DT-FM still works.
-4. Wait for elekloader's **Ready to build** check, set the four-character
-   OS version to `S034`, then choose **Build Firmware**. Save the generated
-   `.syx` on your computer.
-5. Send that `.syx` to the Digitakt with Elektron Transfer
+4. Wait for elekloader's **Ready to build** check, then choose **Build Firmware**.
+   Save the generated `.syx` on your computer.
+6. Send that `.syx` to the Digitakt with Elektron Transfer
 
 Elekloader builds and verifies the OS; **Elektron Transfer does the actual
 upload to the instrument**. Do not power off during the update. Neither
