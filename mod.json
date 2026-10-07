@@ -26,6 +26,8 @@
     {"addr": "0x4003b5b2", "stock": "0c8200000087", "op": "jsr", "target": "ds_samp_chk2"},
     {"addr": "0x4007f30a", "stock": "4fefffd448d77cfc", "op": "jmp", "target": "ds_proj_save"},
     {"addr": "0x4007efe8", "stock": "4fefffdc48d77c3c", "op": "jmp", "target": "ds_proj_load"},
+    {"addr": "0x4007a4ce", "stock": "202f0004206f0008", "op": "jmp", "target": "ds_kit_load"},
+    {"addr": "0x4007a6a6", "stock": "4fefffe448d73c1c", "op": "jmp", "target": "ds_kit_save"},
     {"addr": "0x4000ff20", "stock": "4eb940078f0c", "op": "keep2", "target": "ds_prange"},
     {"addr": "0x400100c4", "stock": "4eb940078f0c", "op": "keep2", "target": "ds_prange"},
     {"addr": "0x4000f534", "stock": "4eb940078f0c", "op": "keep2", "target": "ds_prange"},

@@ -20,8 +20,9 @@ controls and trigger state, writes 32 mono `int32_t` source samples to the
 track buffer at `0x80001a18 + 128*track`, then lets the stock AMP, filter,
 mixer and sends process them. DT-FM uses the SRC page as TUNE, ALGO, RATIO,
 OP, LEVEL, ATTK, DECAY and CHAR. OP (the stock SAMP slot) picks the operator
-that RATIO, LEVEL, ATTK and DECAY show; `ds_tick` keeps the other operators
-in RAM and swaps them onto those knobs when OP turns.
+that RATIO, LEVEL, ATTK and DECAY show; the other three ride inside the
+sound, in parameter slots 0x2e-0x34 that no stock parameter uses, and
+`ds_tick` swaps them onto those knobs when OP turns.
 
 The audio callback runs every 32 frames at 48 kHz, about 1,500 times per
 second. It is time-critical: a synth optimization must reduce work **while

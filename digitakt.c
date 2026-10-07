@@ -32,16 +32,54 @@ typedef unsigned long u32;
 #define DS_OP_INIT {{16, 127, 0, 127}, {16, 80, 0, 90}, {36, 40, 0, 70}, {16, 30, 0, 60}}
 
 static struct ds_voice ds_voices[TRACKS];
-/* Knobs C, E, F, G edit the selected operator; ds_op keeps all four per track. */
+/* Knobs C, E, F, G show one operator; the other three ride in the sound's
+ * slots 0x2e-0x34, which no parameter uses and the OS neither saves nor
+ * restores (it zeroes them on load), so whole-sound copies carry them.
+ * Byte 0 is HID_MARK | the knobs' operator, then 4 bytes per other op. */
+#define HID 112
+#define HID_MARK 0xd0u
+#define KITS 128
+#define LIVE_PROJECT ((const u8 *)0x409babfcu)
+#define KIT0 ((u8 *)0x4191e018u)
+#define KIT_SIZE 2334u
+#define SND_SIZE 162u
+#define LIVE_KIT (*(const u8 *volatile const *)0x800019acu)
+#define KIT_OPS (TRACKS * DS_OPS * 4)
 static const u8 ds_op_slot[4] = {0x13, 0x15, 0x16, 0x17};
 static const u8 ds_op_init[DS_OPS][4] = DS_OP_INIT;
-static u8 ds_op[TRACKS][DS_OPS][4] = {
-    DS_OP_INIT, DS_OP_INIT, DS_OP_INIT, DS_OP_INIT,
-    DS_OP_INIT, DS_OP_INIT, DS_OP_INIT, DS_OP_INIT
-};
-static u8 *ds_snd[TRACKS];
-static u8 ds_sel[TRACKS];
-extern volatile u8 ds_d_turned;
+
+static u32 ds_s7(const u8 *s, u32 slot)
+{ return ((u32)(u16)S_PARAM(s, slot) >> 8) & 0x7fu; }
+
+static u32 ds_op_sel(const u8 *s)
+{
+    u32 sel = ds_s7(s, S_OP) >> 3;
+    return sel > 3u ? 3u : sel;
+}
+
+/* All four operators; an unmarked (new or pool-loaded) sound's hidden ones
+ * are the defaults. */
+static void ds_sound_ops(const u8 *s, u8 o[DS_OPS][4])
+{
+    const u8 *h = s + HID;
+    u32 marked = (h[0] & 0xfcu) == HID_MARK;
+    u32 sel = marked ? h[0] & 3u : ds_op_sel(s), i, j;
+    for (i = 0; i < DS_OPS; ++i)
+        for (j = 0; j < 4u; ++j)
+            o[i][j] = i == sel ? (u8)ds_s7(s, ds_op_slot[j])
+                : marked ? h[1 + 4 * (i - (i > sel)) + j] : ds_op_init[i][j];
+}
+
+static void ds_sound_hide(u8 *s, const u8 o[DS_OPS][4], u32 sel)
+{
+    u8 *h = s + HID;
+    u32 i, j;
+    for (i = 0; i < DS_OPS; ++i)
+        if (i != sel)
+            for (j = 0; j < 4u; ++j) h[1 + 4 * (i - (i > sel)) + j] = o[i][j] & 0x7fu;
+    h[13] = 0;
+    h[0] = (u8)(HID_MARK | sel);
+}
 
 char *ds_fmt_ratio(char *out, s32 value)
 {
@@ -198,6 +236,10 @@ static void ds_read_params(s32 track, struct ds_params *p)
     u32 k;
     u32 ratio = ds_pitch_ratio(track);
     u32 phase_inc = ratio >> 23;
+    const u8 *s = SOUND(track);
+    u8 ops[DS_OPS][4];
+    if (s) ds_sound_ops(s, ops);
+    else for (k = 0; k < sizeof ops; ++k) (&ops[0][0])[k] = (&ds_op_init[0][0])[k];
     if (phase_inc < 8) phase_inc = 8;
     if (phase_inc > 32767u) phase_inc = 32767u;
     p->phase_inc = (u16)phase_inc; /* 50 Hz is 68 phase units/sample. */
@@ -205,7 +247,7 @@ static void ds_read_params(s32 track, struct ds_params *p)
     p->feedback = p->tone = (u8)ds_u7(track, P_CHAR);  /* H: CHAR macro */
     p->velocity = (u8)(((u32)(u16)VEL(track) >> 8) & 0x7fu);
     for (k = 0; k < DS_OPS; ++k) {
-        const u8 *o = ds_op[track][k];
+        const u8 *o = ops[k];
         p->op[k].ratio = o[0];
         p->op[k].level = o[1];
         p->op[k].attack = o[2];
@@ -238,90 +280,159 @@ void ds_inject(void)
     }
 }
 
-static u32 ds_s7(u8 *s, u32 slot)
-{ return ((u32)(u16)S_PARAM(s, slot) >> 8) & 0x7fu; }
-
 static void ds_wc_sync(void);
 
 void ds_tick(void *ctrl)
 {
-    u32 t, j, sel, redraw = 0;
+    u32 t, sel, redraw = 0;
     for (t = 0; t < TRACKS; ++t) {
         u8 *s = SOUND(t);
-        u8 cur[4];
+        u8 o[DS_OPS][4];
         if (!s || s[126] != DS_MACHINE) continue;
-        sel = ds_s7(s, S_OP) >> 3;
-        if (sel > 3u) sel = 3u;
-        for (j = 0; j < 4u; ++j) cur[j] = (u8)ds_s7(s, ds_op_slot[j]);
-        /* Swap only on a D turn: a new pattern or loaded sound brings its own op. */
-        if (sel != ds_sel[t] && s == ds_snd[t] && ds_d_turned) {
-            for (j = 0; j < 4u; ++j) {
-                ds_op[t][ds_sel[t]][j] = cur[j];
-                cur[j] = ds_op[t][sel][j];
-                S_PARAM(s, ds_op_slot[j]) = (s16)(cur[j] << 8);
-            }
+        sel = ds_op_sel(s);
+        if ((s[HID] & 0xfcu) == HID_MARK && (s[HID] & 3u) == sel) continue;
+        ds_sound_ops(s, o);
+        if ((s[HID] & 0xfcu) == HID_MARK) {
+            /* OP turned: its operator onto the knobs, the old one hidden. */
+            u32 j;
+            for (j = 0; j < 4u; ++j) S_PARAM(s, ds_op_slot[j]) = (s16)(o[sel][j] << 8);
             redraw = 1;
         }
-        for (j = 0; j < 4u; ++j) ds_op[t][sel][j] = cur[j];
-        ds_sel[t] = (u8)sel;
-        ds_snd[t] = s;
+        ds_sound_hide(s, o, sel);
     }
-    ds_d_turned = 0;
     if (redraw) *((volatile u8 *)ctrl + 0x20) = 1;
     ds_wc_sync();
 }
 
-/* Project block +0x20..+0x200, skipped by SERIALIZE and DESERIALIZE, in
- * core-dn1's projdata layout: 'ELKP', then tag, size, bytes, zero tag. */
+/* Project block +0x20..+0x200, skipped by SERIALIZE and DESERIALIZE: where
+ * the operators went per track before they rode in the sounds, in core-dn1's
+ * projdata layout ('ELKP', tag, size, bytes, zero tag). Now only read. */
 #define PROJ_GAP 0x20
 #define PROJ_MAGIC 0x454c4b50u
 #define PROJ_TAG 0x464d324fu
 #define PROJ_HEAD 0xbeefbaceu
+/* Stored kits are 0xa00 bytes, of which the OS uses 0..0x8f3; the tail holds
+ * 'DTFM' and all four operators of each track. A project has 128 of them
+ * from +0x310200. */
+#define SKIT0 0x310200u
+#define SKIT_SIZE 0xa00u
+#define SKIT_GAP 0x8f4u
 /* The power-up working copy: dumped to NAND at power-off and DESERIALIZEd
  * at boot, but re-serialized only on project load, so ds_wc_sync keeps our
- * gap in it current. The COKI checksum covers only its header. */
+ * kit tails in it current. The COKI checksum covers only its header. */
 #define WC_DATA ((u8 *)0x406481f8)
+/* A stored kit's sounds: 160 bytes each from +36, SRC slot s at +28 + 2s. */
+#define SSND(rec, t) ((rec) + 36 + 160u * (t))
 
-static u8 ds_live;     /* ds_op came from (or went to) a project */
+static u8 ds_live;     /* the project's sounds came from (or went to) storage */
+static u8 ds_kit_seen[KITS / 8];   /* last load found a tagged tail */
+static u32 ds_wc_next;
 
-void ds_proj_put(u8 *data)
+static s32 ds_kit_index(const u8 *kit)
 {
-    u32 *w = (u32 *)(data + PROJ_GAP);
-    const u8 *src = &ds_op[0][0][0];
-    u8 *dst = (u8 *)(w + 3);
-    u32 i;
-    ds_live = 1;
-    w[0] = PROJ_MAGIC;
-    w[1] = PROJ_TAG;
-    w[2] = sizeof ds_op;
-    for (i = 0; i < sizeof ds_op; ++i) dst[i] = src[i];
-    w[3 + sizeof ds_op / 4] = 0;
+    u32 off = (u32)kit - (u32)KIT0;
+    if (off >= KITS * KIT_SIZE || off % KIT_SIZE) return -1;
+    return (s32)(off / KIT_SIZE);
 }
 
-void ds_proj_get(const u8 *data)
+static int ds_tagged(const u8 *b)
+{ return b[0] == 'D' && b[1] == 'T' && b[2] == 'F' && b[3] == 'M'; }
+
+static void ds_kit_ops(const u8 *kit, u8 *b)
+{
+    u32 t, i;
+    for (t = 0; t < TRACKS; ++t) {
+        const u8 *s = kit + 32 + SND_SIZE * t;
+        u8 *o = b + 16 * t;
+        if (s[126] == DS_MACHINE) ds_sound_ops(s, (u8 (*)[4])o);
+        else for (i = 0; i < 16u; ++i) o[i] = (&ds_op_init[0][0])[i];
+    }
+}
+
+/* After the OS saves a kit (rec, kit), to a project, a file or a copy. */
+void ds_kit_put(u8 *rec, const u8 *kit)
+{
+    u8 *b = rec + SKIT_GAP;
+    b[0] = 'D';
+    b[1] = 'T';
+    b[2] = 'F';
+    b[3] = 'M';
+    ds_kit_ops(kit, b + 4);
+}
+
+static void ds_kit_restore(u8 *kit, const u8 *ops)
+{
+    u32 t;
+    for (t = 0; t < TRACKS; ++t) {
+        u8 *s = kit + 32 + SND_SIZE * t;
+        if (s[126] == DS_MACHINE)
+            ds_sound_hide(s, (const u8 (*)[4])(ops + 16 * t), ds_op_sel(s));
+    }
+}
+
+/* SERIALIZE(data, project, ..., flags, ...): flags bit 1 writes the kits. */
+void ds_proj_put(u8 *data, const u8 *project, u32 flags)
+{
+    if (data && project == LIVE_PROJECT && (flags & 2u)) ds_live = 1;
+}
+
+/* After the OS loads a stored kit into RAM, from a project, a file or a copy. */
+void ds_kit_get(u8 *kit, const u8 *rec)
+{
+    s32 k = ds_kit_index(kit);
+    const u8 *b = rec + SKIT_GAP;
+    u32 tagged = ds_tagged(b);
+    if (tagged) ds_kit_restore(kit, b + 4);
+    if (k < 0) return;
+    if (tagged) ds_kit_seen[k >> 3] |= (u8)(1u << (k & 7));
+    else ds_kit_seen[k >> 3] &= (u8)~(1u << (k & 7));
+}
+
+/* After DESERIALIZE: an older project's per-track operators seed every kit
+ * that had none of its own, as they applied to every pattern then. */
+void ds_proj_get(const u8 *project, const u8 *data)
 {
     const u32 *w = (const u32 *)(data + PROJ_GAP);
-    const u8 *src = (const u8 *)(w + 3);
-    u8 *dst = &ds_op[0][0][0];
-    u32 i;
+    u32 k;
+    if (project != LIVE_PROJECT) return;
     ds_live = 1;
-    if (w[0] == PROJ_MAGIC && w[1] == PROJ_TAG && w[2] == sizeof ds_op)
-        for (i = 0; i < sizeof ds_op; ++i) dst[i] = src[i];
-    else
-        for (i = 0; i < sizeof ds_op; ++i) dst[i] = (&ds_op_init[0][0])[i & 15u];
+    if (w[0] != PROJ_MAGIC || w[1] != PROJ_TAG || w[2] != KIT_OPS) return;
+    for (k = 0; k < KITS; ++k)
+        if (!(ds_kit_seen[k >> 3] & (1u << (k & 7))))
+            ds_kit_restore(KIT0 + KIT_SIZE * k, (const u8 *)(w + 3));
+}
+
+static void ds_wc_kit(u32 k)
+{
+    u8 *rec = WC_DATA + SKIT0 + SKIT_SIZE * k, *kit = KIT0 + KIT_SIZE * k;
+    u8 *b = rec + SKIT_GAP, cur[KIT_OPS];
+    u32 i, t;
+    /* An OP swap writes the knobs behind the OS, which never records them. */
+    for (t = 0; t < TRACKS; ++t) {
+        const u8 *s = kit + 32 + SND_SIZE * t;
+        u8 *srec = SSND(rec, t);
+        if (s[126] != DS_MACHINE || srec[124] != DS_MACHINE) continue;
+        for (i = 0; i < 4u; ++i) {
+            s16 *v = (s16 *)(srec + 28 + 2 * ds_op_slot[i]);
+            if (*v != S_PARAM(s, ds_op_slot[i])) *v = S_PARAM(s, ds_op_slot[i]);
+        }
+    }
+    ds_kit_ops(kit, cur);
+    if (ds_tagged(b)) {
+        for (i = 0; i < KIT_OPS && b[4 + i] == cur[i]; ++i) {}
+        if (i == KIT_OPS) return;
+    }
+    ds_kit_put(rec, kit);
 }
 
 /* Not before the boot restore has run (ds_live), so defaults never
- * overwrite the persisted block. */
+ * overwrite the persisted tails. The live kit, then one more in turn. */
 static void ds_wc_sync(void)
 {
-    const u32 *w = (const u32 *)(WC_DATA + PROJ_GAP);
-    const u8 *a = (const u8 *)(w + 3), *b = &ds_op[0][0][0];
-    u32 i;
+    s32 k;
     if (!ds_live || *(const u32 *)WC_DATA != PROJ_HEAD) return;
-    if (w[0] == PROJ_MAGIC && w[1] == PROJ_TAG && w[2] == sizeof ds_op) {
-        for (i = 0; i < sizeof ds_op && a[i] == b[i]; ++i) {}
-        if (i == sizeof ds_op) return;
-    }
-    ds_proj_put(WC_DATA);
+    k = ds_kit_index(LIVE_KIT);
+    if (k >= 0) ds_wc_kit((u32)k);
+    ds_wc_kit(ds_wc_next);
+    ds_wc_next = (ds_wc_next + 1u) & (KITS - 1u);
 }

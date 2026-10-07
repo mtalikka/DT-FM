@@ -10,7 +10,7 @@ The source, not a modified Elektron OS, is what this repository distributes.
 - **1.0.0 (firmware S034):** First DT-FM release. Replaced the Sophie voice
   code with a dedicated 4-op FM machine (formerly FM2OP; its projects keep
   working). OP shows the selected operator's number, ALGO draws its routing,
-  and the hidden operators survive a power cycle.
+  and the hidden operators are kept per pattern and survive a power cycle.
 
 ---
 
@@ -39,12 +39,15 @@ I have the utmost respect for people that do low-level hacking and write audio c
 | G | DECAY | Selected operator's envelope decay; `INF` holds |
 | H | CHAR | Operator 4 feedback and overall brightness |
 
-The sound saves only the operator OP shows; the other three are kept per
-track and saved with the project, in a gap of the project's storage block
-that the stock OS neither writes nor reads. They also survive a power cycle,
-like any unsaved edit. They follow the track across
-patterns, but not into the sound pool or saved kits, and a project saved
-without DT-FM starts them at defaults. TUNE, ALGO and CHAR can be
+Each sound keeps all four operators: the one OP shows in its normal
+parameters, the other three in parameter slots the stock OS leaves unused.
+Copying a sound, track or pattern brings all four, while pasting only the
+SRC page brings just the one OP shows. They are saved with the project, in
+a part of each pattern's stored kit that the stock OS neither writes nor
+reads, and survive a power cycle like any unsaved edit. The sound pool
+keeps only the operator OP shows: a pool sound's other three start at
+defaults, as in a project saved without DT-FM. A project from the earlier
+build that kept them per track gives every pattern its tracks' old values. TUNE, ALGO and CHAR can be
 parameter-locked; the per-operator controls cannot yet. The normal AMP page controls
 the note envelope: set HOLD to `NOTE` for TRIG LEN to determine when the
 release begins. Use a finite DEC to hear that release. DEC `INF` can keep
