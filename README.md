@@ -7,10 +7,14 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 ## Changelog
 
+- **1.0.1 (firmware S034):** The hidden operators ride in each sound, so
+  every pattern keeps its own and copying a sound, track or pattern brings
+  all four. Fixed the operator OP shows coming back with older values after
+  a power cycle.
 - **1.0.0 (firmware S034):** First DT-FM release. Replaced the Sophie voice
   code with a dedicated 4-op FM machine (formerly FM2OP; its projects keep
   working). OP shows the selected operator's number, ALGO draws its routing,
-  and the hidden operators are kept per pattern and survive a power cycle.
+  and the hidden operators survive a power cycle.
 
 ---
 
@@ -93,14 +97,14 @@ Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 ## Install: no compiler required
 
 You need only the prebuilt
-[DT-FM mod](release/dt-fm-1.0.0.elemod),
+[DT-FM mod](release/dt-fm-1.0.1.elemod),
 [elekloader](https://github.com/irpina/elekloader/releases/latest), and your
 own original Digitakt Mk1 OS 1.53 `.syx`
 The `.elemod` contains this project's code, **not** Elektron's firmware.
 You do not need ColdFire tools, Python, or a source checkout to install it.
 
 1. Open elekloader and select your stock OS using **Change stock firmware**.
-2. Choose **Install from file** and select `dt-fm-1.0.0.elemod`.
+2. Choose **Install from file** and select `dt-fm-1.0.1.elemod`.
    Enable DT-FM. elekloader's built-in **core 2.1** should enable with it.
    If elekloader still lists the earlier `digisophie` mod (FM2OP), disable
    it: both add machine 7.

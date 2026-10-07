@@ -28,9 +28,9 @@ cd "$loader"
 "$python" -m elekloader.lint --stock "$stock" \
     "$loader/mods/core/out/core-2.1.elemod" \
     "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" \
-    "$project/out/dt-fm-1.0.0.elemod"
+    "$project/out/dt-fm-1.0.1.elemod"
 "$python" -m elekloader.patch --stock "$stock" \
     --mod "$loader/mods/core/out/core-2.1.elemod" \
     --mod "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" \
-    --mod "$project/out/dt-fm-1.0.0.elemod" \
+    --mod "$project/out/dt-fm-1.0.1.elemod" \
     --out "$project/out/Digitakt_OS1.53_DT-FM_S034.syx" --version S034
