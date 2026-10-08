@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "../sophie.h"
+#include "../src/sophie.h"
 
 static uint64_t energy(const int32_t *x, unsigned n)
 {

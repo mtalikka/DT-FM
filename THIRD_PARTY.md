@@ -2,7 +2,7 @@
 
 ## Sophie for Schwung
 
-`sophie.c` is a fixed-point port of the original Sophie metallic-percussion
+`src/sophie.c` is a fixed-point port of the original Sophie metallic-percussion
 algorithm in `../schwung-sophie/src/dsp/sophie.c`, adapted for one Digitakt
 track/voice at 48 kHz. The source project is MIT licensed.
 
@@ -27,7 +27,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 `diagnostics/digihealth/` is a locally modified copy of
 [irpina/digihealth](https://github.com/irpina/digihealth), commit
-`72f0183383e67c3313146bf77df6f71dd7996a8f`. It is
+`72f0183383e67c3313146bf77df6f71dd7996a8f`, with its OS 1.54 port (`6d2a956`)
+applied. It is
 GPL-2.0-or-later, not MIT. Its full license is retained at
 `diagnostics/digihealth/LICENSE`. The local change makes FAST AUDIO opt-in
 instead of enabling it at boot. Its source is included so that the exact

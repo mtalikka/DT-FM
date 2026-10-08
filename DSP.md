@@ -5,8 +5,8 @@ the renderer's fixed-point choices, and the remaining performance limit. It
 is for developers changing the synth, not a substitute for the stock OS or
 hardware testing. Addresses below come from this project's OS 1.53 adapter
 and patch manifest. OS 1.54 has the same routines and data layouts at the
-addresses in `os154.inc`, `os154.h` and the `ports` entry of `mod.json`.
-None of them may be reused on another firmware version.
+addresses in `src/os154.inc`, `src/os154.h` and the `ports` entry of
+`src/mod.json`. None of them may be reused on another firmware version.
 
 The [RingTone DSP reference](https://github.com/DigiAlchemydsp/RingTone/blob/main/DSP.md)
 inspired this layout. RingTone documents the **Digitone Mk1 OS 1.43**, whose

@@ -17,32 +17,34 @@ if [ ! -f "$stock" ] || [ ! -f "$loader/elekloader/sdk/build.py" ]; then
     exit 2
 fi
 
-# The OS the stock file is for: 1.54's files are named -os1.54, 1.53's are not.
+# The OS the stock file is for.
 os=$(PYTHONPATH="$loader${PYTHONPATH:+:$PYTHONPATH}" "$python" -c '
 import sys
 from elekloader import devices, syx
 dev, rel = devices.identify(syx.Syx.load(sys.argv[1]).sha256)
 print(rel.version if dev.key == "digitakt-mk1" else dev.key)' "$stock")
 case "$os" in
-    1.53) suffix="" ;;
-    1.54) suffix="-os1.54" ;;
+    1.53) core="$loader/mods/core/out/core-2.1.elemod" ;;
+    1.54) core="$loader/mods/core/out/core-2.1-os1.54.elemod" ;;
     *) echo "Expected a Digitakt mk1 OS 1.53 or 1.54 file, not $os." >&2; exit 2 ;;
 esac
+dtfm="$project/out/dt-fm-1.0.1-os$os.elemod"
+health="$project/diagnostics/digihealth/out/digihealth-1.0.1-os$os.elemod"
 
 cd "$loader"
 "$python" -m elekloader.sdk.build mods/core --stock "$stock"
-"$python" -m elekloader.sdk.build "$project" --stock "$stock"
+"$python" -m elekloader.sdk.build "$project/src" --stock "$stock" --out "$project/out"
 (
     cd "$project/diagnostics/digihealth"
     PYTHONPATH="$loader${PYTHONPATH:+:$PYTHONPATH}" "$python" build.py --stock "$stock"
 )
+# elekloader adds -os<version> only for a port's OS; name 1.53's files alike.
+if [ "$os" = 1.53 ]; then
+    mv -f "$project/out/dt-fm-1.0.1.elemod" "$dtfm"
+    mv -f "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" "$health"
+fi
 
-"$python" -m elekloader.lint --stock "$stock" \
-    "$loader/mods/core/out/core-2.1$suffix.elemod" \
-    "$project/diagnostics/digihealth/out/digihealth-1.0.1$suffix.elemod" \
-    "$project/out/dt-fm-1.0.1$suffix.elemod"
+"$python" -m elekloader.lint --stock "$stock" "$core" "$health" "$dtfm"
 "$python" -m elekloader.patch --stock "$stock" \
-    --mod "$loader/mods/core/out/core-2.1$suffix.elemod" \
-    --mod "$project/diagnostics/digihealth/out/digihealth-1.0.1$suffix.elemod" \
-    --mod "$project/out/dt-fm-1.0.1$suffix.elemod" \
+    --mod "$core" --mod "$health" --mod "$dtfm" \
     --out "$project/out/Digitakt_OS${os}_DT-FM_S034.syx" --version S034

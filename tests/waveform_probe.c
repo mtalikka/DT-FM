@@ -2,7 +2,7 @@
 /* Standalone continuity diagnostic for the fixed-point DT-FM renderer. */
 #include <stdint.h>
 #include <stdio.h>
-#include "../sophie.h"
+#include "../src/sophie.h"
 
 #define N 24000
 static int32_t pcm[N];

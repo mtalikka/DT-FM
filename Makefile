@@ -6,12 +6,12 @@ CROSS_CFLAGS = -mcpu=54455 -O2 -ffreestanding -fno-builtin -nostdlib -fno-pic -f
 .PHONY: test cross-check
 out:
 	mkdir -p out
-out/test_sophie: sophie.c sophie.h tests/test_sophie.c | out
-	$(CC) $(CFLAGS) -I. sophie.c tests/test_sophie.c -o $@
+out/test_sophie: src/sophie.c src/sophie.h tests/test_sophie.c | out
+	$(CC) $(CFLAGS) -Isrc src/sophie.c tests/test_sophie.c -o $@
 test: out/test_sophie
 	./out/test_sophie
 cross-check: | out
 	mkdir -p out/cross
-	$(CROSS)as -mcpu=54455 -o out/cross/glue.o glue.s
-	$(CROSS)gcc $(CROSS_CFLAGS) -I. -c digitakt.c -o out/cross/digitakt.o
-	$(CROSS)gcc $(CROSS_CFLAGS) -I. -c sophie.c -o out/cross/sophie.o
+	$(CROSS)as -mcpu=54455 -I src -o out/cross/glue.o src/glue.s
+	$(CROSS)gcc $(CROSS_CFLAGS) -Isrc -c src/digitakt.c -o out/cross/digitakt.o
+	$(CROSS)gcc $(CROSS_CFLAGS) -Isrc -c src/sophie.c -o out/cross/sophie.o
