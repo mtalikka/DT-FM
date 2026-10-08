@@ -7,7 +7,9 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 ## Changelog
 
-- **1.2.0 (firmware S034, not yet released):** Built for elekloader's
+- **1.2.0 (firmware S034, a preview):** elekloader can't build it yet: it
+  needs core 3.0 and machine-pages 1.1, which no elekloader release has.
+  Until one does, install 1.1.0. Built for elekloader's
   core 3.0 and machine-pages 1.1, which draw DT-FM's SRC page, so it shares
   a build with other machines made for them, such as SOPHIE's machine-pages
   build once its author publishes it. ALGO's diagram and OP's number are
@@ -108,18 +110,26 @@ Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 
 ## Install: no compiler required
 
+**Install 1.1.0 for now.** 1.2.0 is on the releases page as a preview, but
+elekloader can't build it yet: it needs core 3.0 and machine-pages 1.1,
+which are in elekloader's source but in no elekloader release. The app and
+the web page refuse 1.2.0 until one has them.
+
 You need only the prebuilt DT-FM mod for your OS, `dt-fm-1.1.0-os1.53.elemod`
 or `dt-fm-1.1.0-os1.54.elemod` from the
-[latest release](https://github.com/mtalikka/DT-FM/releases/latest),
+[1.1.0 release](https://github.com/mtalikka/DT-FM/releases/tag/v1.1.0),
 [elekloader](https://github.com/irpina/elekloader/releases/latest)
 (0.4.0 or later for OS 1.54), and your own original Digitakt Mk1 OS 1.53
-or 1.54 `.syx`.
+or 1.54 `.syx`. DT-FM 1.1.0 is also in elekloader's shop, so on
+[elekloader's web page](https://irpina.github.io/elekloader/) you can add it
+from the library instead of downloading it.
 The `.elemod` contains this project's code, **not** Elektron's firmware.
 You do not need ColdFire tools, Python, or a source checkout to install it.
 
 1. Open elekloader and select your stock OS using **Add its stock OS file**.
-2. From the mod list, choose **Add your own .elemod** and select the file for
-   your OS. elekloader refuses the file made for the other OS.
+2. Choose **Add from the library** and add DT-FM, or choose **Add your own
+   .elemod** and select the 1.1.0 file for your OS. elekloader refuses the
+   file made for the other OS.
    Enable DT-FM. elekloader's built-in **core 2.1** should enable with it.
    If elekloader still lists the earlier `digisophie` mod (FM2OP), disable
    it: both add machine 7.
@@ -137,10 +147,6 @@ You do not need ColdFire tools, Python, or a source checkout to install it.
 Elekloader builds and verifies the OS; **Elektron Transfer does the actual
 upload to the instrument**. Do not power off during the update. Neither
 the stock nor modified OS file belongs in this repository.
-
-These steps install the released 1.1.0. This source is 1.2.0, which needs
-elekloader's core 3.0 and machine-pages 1.1; no elekloader release has
-machine-pages 1.1 yet, so until one does, build 1.2.0 from source (below).
 
 ### Build the mods from source (developers only)
 
@@ -160,7 +166,8 @@ ELEKLOADER_CROSS=m68k-elf- sh scripts/build.sh \
 This builds core 3.0, machine-pages 1.1, DT-FM and the optional diagnostic
 from source for the OS of the file you give it, lints the combination, and
 writes the verified custom OS to `out/Digitakt_OS1.54_DT-FM_S034.syx`. Your
-elekloader checkout must have core 3.0 and machine-pages 1.1. The mods are
+elekloader checkout must have core 3.0 and machine-pages 1.1, as its main
+branch has. This is how to run 1.2.0 before an elekloader release can. The mods are
 named for the OS too: `out/dt-fm-1.2.0-os1.54.elemod` and
 `diagnostics/digihealth/out/digihealth-1.0.1-os1.54.elemod` (`1.53` for a
 1.53 file). To test DSP alone, run `make test`;
