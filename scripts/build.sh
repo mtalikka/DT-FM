@@ -28,7 +28,7 @@ case "$os" in
     1.54) core="$loader/mods/core/out/core-2.1-os1.54.elemod" ;;
     *) echo "Expected a Digitakt mk1 OS 1.53 or 1.54 file, not $os." >&2; exit 2 ;;
 esac
-dtfm="$project/out/dt-fm-1.0.1-os$os.elemod"
+dtfm="$project/out/dt-fm-1.1.0-os$os.elemod"
 health="$project/diagnostics/digihealth/out/digihealth-1.0.1-os$os.elemod"
 
 cd "$loader"
@@ -40,7 +40,7 @@ cd "$loader"
 )
 # elekloader adds -os<version> only for a port's OS; name 1.53's files alike.
 if [ "$os" = 1.53 ]; then
-    mv -f "$project/out/dt-fm-1.0.1.elemod" "$dtfm"
+    mv -f "$project/out/dt-fm-1.1.0.elemod" "$dtfm"
     mv -f "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" "$health"
 fi
 

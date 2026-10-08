@@ -7,13 +7,14 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 ## Changelog
 
+- **1.1.0 (firmware S034):** DT-FM and the optional diagnostic also build
+  for OS 1.54, from the same source and with the same behavior: one
+  `.elemod` for each OS, named for it (`-os1.53`, `-os1.54`). The 1.54
+  files need elekloader 0.4.0 or later.
 - **1.0.1 (firmware S034):** The hidden operators ride in each sound, so
   every pattern keeps its own and copying a sound, track or pattern brings
   all four. Fixed the operator OP shows coming back with older values after
-  a power cycle. DT-FM and the optional diagnostic also build for OS 1.54,
-  from the same source and with the same behavior: one `.elemod` for each
-  OS, named for it (`-os1.53`, `-os1.54`). The 1.54 files need elekloader
-  0.4.0 or later.
+  a power cycle.
 - **1.0.0 (firmware S034):** First DT-FM release. Replaced the Sophie voice
   code with a dedicated 4-op FM machine (formerly FM2OP; its projects keep
   working). OP shows the selected operator's number, ALGO draws its routing,
@@ -99,8 +100,8 @@ Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 
 ## Install: no compiler required
 
-You need only the prebuilt DT-FM mod for your OS, `dt-fm-1.0.1-os1.53.elemod`
-or `dt-fm-1.0.1-os1.54.elemod` from the
+You need only the prebuilt DT-FM mod for your OS, `dt-fm-1.1.0-os1.53.elemod`
+or `dt-fm-1.1.0-os1.54.elemod` from the
 [latest release](https://github.com/mtalikka/DT-FM/releases/latest),
 [elekloader](https://github.com/irpina/elekloader/releases/latest)
 (0.4.0 or later for OS 1.54), and your own original Digitakt Mk1 OS 1.53
@@ -147,7 +148,7 @@ ELEKLOADER_CROSS=m68k-elf- sh scripts/build.sh \
 This builds core 2.1, DT-FM and the optional diagnostic from source for the
 OS of the file you give it, lints the combination, and writes the verified
 custom OS to `out/Digitakt_OS1.54_DT-FM_S034.syx`. The mods are named for
-the OS too: `out/dt-fm-1.0.1-os1.54.elemod` and
+the OS too: `out/dt-fm-1.1.0-os1.54.elemod` and
 `diagnostics/digihealth/out/digihealth-1.0.1-os1.54.elemod` (`1.53` for a
 1.53 file). To test DSP alone, run `make test`;
 `make cross-check` additionally compiles for ColdFire. Optional emulator
