@@ -7,6 +7,14 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 ## Changelog
 
+- **1.2.0 (firmware S034, not yet released):** Built for elekloader's
+  core 3.0 and machine-pages 1.1, which draw DT-FM's SRC page, so it shares
+  a build with other machines made for them, such as SOPHIE's machine-pages
+  build once its author publishes it. ALGO's diagram and OP's number are
+  drawn as before, through machine-pages 1.1's knobs that draw themselves.
+  DT-FM is now machine 9; it was 7, SOPHIE's. Tracks saved as DT-FM by 1.1.0
+  or earlier load as another machine (SOPHIE if it is installed, else
+  ONESHOT): select DT-FM on them again and re-set their sound if needed.
 - **1.1.0 (firmware S034):** DT-FM and the optional diagnostic also build
   for OS 1.54, from the same source and with the same behavior: one
   `.elemod` for each OS, named for it (`-os1.53`, `-os1.54`). The 1.54
@@ -130,6 +138,10 @@ Elekloader builds and verifies the OS; **Elektron Transfer does the actual
 upload to the instrument**. Do not power off during the update. Neither
 the stock nor modified OS file belongs in this repository.
 
+These steps install the released 1.1.0. This source is 1.2.0, which needs
+elekloader's core 3.0 and machine-pages 1.1; no elekloader release has
+machine-pages 1.1 yet, so until one does, build 1.2.0 from source (below).
+
 ### Build the mods from source (developers only)
 
 ColdFire tools are needed only to change or recompile the mod. You need
@@ -145,10 +157,11 @@ ELEKLOADER_CROSS=m68k-elf- sh scripts/build.sh \
   firmware/Digitakt_OS1.54.syx /path/to/elekloader
 ```
 
-This builds core 2.1, DT-FM and the optional diagnostic from source for the
-OS of the file you give it, lints the combination, and writes the verified
-custom OS to `out/Digitakt_OS1.54_DT-FM_S034.syx`. The mods are named for
-the OS too: `out/dt-fm-1.1.0-os1.54.elemod` and
+This builds core 3.0, machine-pages 1.1, DT-FM and the optional diagnostic
+from source for the OS of the file you give it, lints the combination, and
+writes the verified custom OS to `out/Digitakt_OS1.54_DT-FM_S034.syx`. Your
+elekloader checkout must have core 3.0 and machine-pages 1.1. The mods are
+named for the OS too: `out/dt-fm-1.2.0-os1.54.elemod` and
 `diagnostics/digihealth/out/digihealth-1.0.1-os1.54.elemod` (`1.53` for a
 1.53 file). To test DSP alone, run `make test`;
 `make cross-check` additionally compiles for ColdFire. Optional emulator
@@ -169,7 +182,7 @@ Elektron firmware or samples.
 
 | Path | Contents |
 | --- | --- |
-| `src/` | The mod: `mod.json` (manifest and patch sites), `glue.s` and `digitakt.c` (the Digitakt side), `sophie.c` and `sophie.h` (the FM engine; the names predate DT-FM) |
+| `src/` | The mod: `mod.json` (manifest and patch sites), `digitakt.c` (the machine: its page, render and operators), `glue.s` (the hooks that store the hidden operators), `sophie.c` and `sophie.h` (the FM engine; the names predate DT-FM) |
 | `tests/` | The host DSP test `make test` runs, a waveform probe and emulator probes |
 | `scripts/build.sh` | Builds, lints and patches everything for one stock OS |
 | `diagnostics/` | The optional digihealth diagnostic's source and notes |

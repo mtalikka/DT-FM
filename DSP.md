@@ -15,9 +15,9 @@ sites do not describe the Digitakt or DT-FM.
 
 ## Audio path
 
-DT-FM is a custom SRC machine, ID 7. Core 2.1 registers it; `glue.s` hooks
-the Digitakt's audio render at `0x40077fba` and calls `ds_inject` after the
-stock source work. For each DT-FM track, `digitakt.c` reads its current
+DT-FM is a custom SRC machine, ID 9. Core 3.0 registers it; the machine-pages
+mod draws its SRC page from `ds_page` and, from its render event at
+`0x40077fba`, calls `ds_inject` after the stock source work. For each DT-FM track, `digitakt.c` reads its current
 controls and trigger state, writes 32 mono `int32_t` source samples to the
 track buffer at `0x80001a18 + 128*track`, then lets the stock AMP, filter,
 mixer and sends process them. DT-FM uses the SRC page as TUNE, ALGO, RATIO,

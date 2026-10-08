@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: MIT */
-/* Digitakt Mk1 OS 1.53 and 1.54 adapter for the four-operator FM engine. */
+/* Digitakt Mk1 OS 1.53 and 1.54 adapter for the four-operator FM engine: a machine for elekloader's core
+ * 3.0, whose SRC page the machine-pages mod draws from ds_page. */
 #include "sophie.h"
+#include "digitakt-mk1/core3.h"
 #ifdef OS154                        /* the Digitakt mk1 1.54 (mod.json's port) */
 #include "os154.h"
 #else                               /* the Digitakt mk1 1.53 */
@@ -13,9 +15,8 @@ typedef signed short s16;
 typedef signed long s32;
 typedef unsigned long u32;
 
-#define DS_MACHINE 7
+#define DS_MACHINE 9
 #define TRACKS 8
-#define TBUF(t) ((s32 *)(unsigned long)(OS_TBUF + 128u * (u32)(t)))
 #define MACH(t) (*(volatile const u8 *)(unsigned long)(OS_MACH + (u32)(t)))
 #define VP(t, o) (*(volatile const s16 *)(unsigned long)(OS_VP + 106u * (u32)(t) + (u32)(o)))
 #define NOTE(t) (*(volatile const s32 *)(unsigned long)(OS_NOTE + 4u * (u32)(t)))
@@ -86,9 +87,11 @@ static void ds_sound_hide(u8 *s, const u8 o[DS_OPS][4], u32 sel)
     h[0] = (u8)(HID_MARK | sel);
 }
 
-char *ds_fmt_ratio(char *out, s32 value)
+static int32_t ds_fmt_ratio(char *out, int32_t value, int32_t ctx, int32_t machine)
 {
     u32 c = ds_ratio_centi[(((u32)value >> 8) & 0x7fu) >> 2];
+    (void)ctx;
+    (void)machine;
     if (c >= 1000u) {
         out[0] = (char)('0' + c / 1000u);
         out[1] = (char)('0' + c / 100u % 10u);
@@ -101,50 +104,54 @@ char *ds_fmt_ratio(char *out, s32 value)
         out[3] = (char)('0' + c % 10u);
     }
     out[4] = 0;
-    return out;
+    return 1;
 }
 
-char *ds_fmt_op(char *out, s32 value)
+static int32_t ds_fmt_op(char *out, int32_t value, int32_t ctx, int32_t machine)
 {
     u32 n = (((u32)value >> 8) & 0x7fu) >> 3;
+    (void)ctx;
+    (void)machine;
     out[0] = (char)('1' + (n > 3u ? 3u : n));
     out[1] = 0;
-    return out;
+    return 1;
 }
 
-char *ds_fmt_algo(char *out, s32 value)
+static int32_t ds_fmt_algo(char *out, int32_t value, int32_t ctx, int32_t machine)
 {
     u32 n = ((u32)value >> 8) & 0x7fu;
+    (void)ctx;
+    (void)machine;
     out[0] = (char)('1' + (n >> 4));
     out[1] = 0;
-    return out;
+    return 1;
 }
 
-char *ds_fmt_u7(char *out, s32 value)
+static int32_t ds_fmt_u7(char *out, int32_t value, int32_t ctx, int32_t machine)
 {
     u32 n = ((u32)value >> 8) & 0x7fu;
     char *p = out;
+    (void)ctx;
+    (void)machine;
     if (n >= 100) { *p++ = '1'; n -= 100; *p++ = (char)('0' + n / 10); }
     else if (n >= 10) *p++ = (char)('0' + n / 10);
     *p++ = (char)('0' + n % 10);
     *p = 0;
-    return out;
+    return 1;
 }
 
-char *ds_fmt_decay(char *out, s32 value)
+static int32_t ds_fmt_decay(char *out, int32_t value, int32_t ctx, int32_t machine)
 {
     if ((((u32)value >> 8) & 0x7fu) == 127u) {
         out[0] = 'I';
         out[1] = 'N';
         out[2] = 'F';
         out[3] = 0;
-        return out;
+        return 1;
     }
-    return ds_fmt_u7(out, value);
+    return ds_fmt_u7(out, value, ctx, machine);
 }
 
-/* Bitmap::fillRect(bmp, x0, y0, x1, y1, colour); y = 0 is the screen's bottom row. */
-#define FILL_RECT ((void (*)(void *, s32, s32, s32, s32, s32))OS_FILL_RECT)
 /* ALGO's 17x17 diagrams as {x0, row0, x1, row1} boxes, row 0 on top:
  * modulators above their targets, carriers standing on the output bar. */
 static const u8 ds_algo_box[][4] = {
@@ -167,15 +174,68 @@ static const u8 ds_algo_box[][4] = {
 };
 static const u8 ds_algo_at[9] = {0, 6, 13, 21, 28, 35, 44, 53, 62};
 
-/* In the knob area SAMP's box uses: x + 1..x + 17, y..y + 16. */
-void ds_algo_gfx(s32 value, void *bmp, s32 x, s32 y)
+/* Knob B's graphic: the algorithm's diagram, in the knob's 17x17 area. */
+static int32_t ds_draw_algo(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
 {
     u32 a = (((u32)value >> 8) & 0x7fu) >> 4, i;
+    (void)flag;
     for (i = ds_algo_at[a]; i < ds_algo_at[a + 1]; ++i) {
         const u8 *b = ds_algo_box[i];
-        FILL_RECT(bmp, x + 1 + b[0], y + 16 - b[3], x + 1 + b[2], y + 16 - b[1], 1);
+        fw_fillrect(bmp, x + 1 + b[0], y + 16 - b[3], x + 1 + b[2], y + 16 - b[1], 1);
     }
+    return 1;
 }
+
+/* SAMP's framed number: (fn, value 8.8, bmp, x, y, flag). */
+#define NUM_BOX ((void (*)(s32, s32, void *, s32, s32, s32))OS_NUM_BOX)
+
+/* Knob D's graphic: the operator's number, 1-4, in SAMP's frame. */
+static int32_t ds_draw_op(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+{
+    u32 n = (((u32)value >> 8) & 0x7fu) >> 3;
+    NUM_BOX(0, (s32)((n > 3u ? 3u : n) + 1u) << 8, bmp, x, y, flag);
+    return 1;
+}
+
+/* The machine menu's icon: an 11 x 7 Bitmap, as the stock icons are. */
+static const u32 ds_icon_px[11] = {
+    0x10400000, 0x28a00000, 0x55400000, 0xaa800000, 0x55400000, 0x28a00000, 0x10400000
+};
+static const u32 ds_icon_mask[11] = {
+    0xfe000000, 0xfe000000, 0xfe000000, 0xfe000000, 0xfe000000, 0xfe000000, 0xfe000000
+};
+static const struct { const void *vt; u32 w, h, one; const u32 *px, *mask; u32 end; } ds_icon = {
+    fw_bitmap_vt, 11, 7, 1, ds_icon_px, ds_icon_mask, 0
+};
+
+/* The SRC page machine-pages draws: SLICE's, so the knobs keep SLICE's parameter slots (locks, MIDI and
+ * the LFOs reach them), and every knob but TUNE turns as BR's (0x86) does, over its own range. */
+static const struct cm_ui ds_page = {
+    .abi = cm_ui_v31, .page_from = 3, .group = "DTFM",
+    .knob = {
+        { .name = "TUNE", .lname = "Tune" },
+        { .name = "ALGO", .lname = "Algorithm", .look = 0x86, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+          .max = 0x7f00, .def = 0, .fmt = ds_fmt_algo, .draw = ds_draw_algo },
+        { .name = "RATIO", .lname = "Ratio", .look = 0x86, .flags = CM_RANGE | CM_DEFAULT,
+          .max = 0x7f00, .def = 0x1000, .fmt = ds_fmt_ratio },
+        { .name = "OP", .lname = "Operator", .look = 0x86,
+          .flags = CM_RANGE | CM_DEFAULT | CM_NOT_SAMPLE | CM_DRAW,
+          .max = 0x1f00, .def = 0, .fmt = ds_fmt_op, .draw = ds_draw_op },
+        { .name = "LEVEL", .lname = "Level", .look = 0x86, .flags = CM_RANGE | CM_DEFAULT,
+          .max = 0x7f00, .def = 0x7f00, .fmt = ds_fmt_u7 },
+        { .name = "ATTK", .lname = "Attack", .look = 0x86, .flags = CM_RANGE | CM_DEFAULT,
+          .max = 0x7f00, .def = 0, .fmt = ds_fmt_u7 },
+        { .name = "DECAY", .lname = "Decay", .look = 0x86, .flags = CM_RANGE | CM_DEFAULT,
+          .max = 0x7f00, .def = 0x7f00, .fmt = ds_fmt_decay },
+        { .name = "CHAR", .lname = "Character", .look = 0x86, .flags = CM_RANGE | CM_DEFAULT,
+          .max = 0x7f00, .def = 0x4000, .fmt = ds_fmt_u7 },
+    },
+};
+
+/* Params 3: SLICE's eight parameters; render DS_MACHINE: its own voice window, which ds_inject fills. */
+const struct cm_machine ds_machine = {
+    DS_MACHINE, "DT-FM", "DTFM", &ds_icon, 3, DS_MACHINE, CM_UI_TAG, &ds_page
+};
 
 static u32 ds_u7(s32 track, s32 offset)
 { return ((u32)(u16)VP(track, offset) >> 8) & 0x7fu; }
@@ -260,11 +320,13 @@ static void ds_read_params(s32 track, struct ds_params *p)
     }
 }
 
-void ds_inject(void)
+/* machine-pages' ev_render_voices, after playback has written every track's block. */
+void ds_inject(int32_t *blocks)
 {
     u32 triggers = TRIG_BITS;
     s32 track;
     for (track = 0; track < TRACKS; ++track) {
+        int32_t *out = blocks + DS_BLOCK_SIZE * track;
         struct ds_params params;
         u32 i;
         int trigger;
@@ -275,13 +337,11 @@ void ds_inject(void)
         trigger = (triggers & (1u << track)) != 0;
         ds_voice_gate(&ds_voices[track], AMP_LEVEL(track), AMP_PHASE(track));
         if (!trigger && (!ds_voices[track].active || ds_voices[track].sleeping)) {
-            s32 *out = TBUF(track);
             for (i = 0; i < DS_BLOCK_SIZE; ++i) out[i] = 0;
             continue;
         }
         ds_read_params(track, &params);
-        ds_voice_render(&ds_voices[track], &params, trigger,
-                        TBUF(track), DS_BLOCK_SIZE);
+        ds_voice_render(&ds_voices[track], &params, trigger, out, DS_BLOCK_SIZE);
     }
 }
 

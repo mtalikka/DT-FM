@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Digitakt mk1 MAIN OS 1.54: the stock data and code digitakt.c uses (os153.h
  * and os154.h, one per OS; digitakt.c includes the one OS154 picks). */
-#define OS_TBUF        0x80001a18u   /* the render's per-track blocks, 128 bytes a track */
 #define OS_MACH        0x800018bcu   /* the render's machine byte per track */
 #define OS_VP          0x80002794u   /* the render's voice parameters, 106 bytes a track */
 #define OS_NOTE        0x80001f28u   /* the trig's note per track, 16.16 */
@@ -14,4 +13,4 @@
 #define OS_PITCH_TAB   0x4019b4c0u   /* the firmware's pitch table */
 #define OS_PROJECT     0x409bbbfcu   /* the project in RAM; its 128 kits at +0xf6341c */
 #define OS_WC_DATA     0x406491f8u   /* the power-up working copy's project block */
-#define OS_FILL_RECT   0x400c1bceu   /* Bitmap::fillRect(bmp, x0, y0, x1, y1, colour) */
+#define OS_NUM_BOX     0x400607fau   /* SAMP's knob graphic: its number in a frame */

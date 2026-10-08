@@ -1,5 +1,6 @@
 #!/bin/sh
-# Build the S034 DT-FM release without redistributing firmware.
+# Build the S034 DT-FM release without redistributing firmware. The elekloader
+# checkout must have core 3.0 and machine-pages 1.1 (mods/core, mods/machine-pages).
 set -eu
 
 if [ "$#" -ne 2 ]; then
@@ -24,15 +25,18 @@ from elekloader import devices, syx
 dev, rel = devices.identify(syx.Syx.load(sys.argv[1]).sha256)
 print(rel.version if dev.key == "digitakt-mk1" else dev.key)' "$stock")
 case "$os" in
-    1.53) core="$loader/mods/core/out/core-2.1.elemod" ;;
-    1.54) core="$loader/mods/core/out/core-2.1-os1.54.elemod" ;;
+    1.53) port="" ;;
+    1.54) port="-os1.54" ;;
     *) echo "Expected a Digitakt mk1 OS 1.53 or 1.54 file, not $os." >&2; exit 2 ;;
 esac
-dtfm="$project/out/dt-fm-1.1.0-os$os.elemod"
+core="$loader/mods/core/out/core-3.0$port.elemod"
+pages="$loader/mods/machine-pages/out/machine-pages-1.1$port.elemod"
+dtfm="$project/out/dt-fm-1.2.0-os$os.elemod"
 health="$project/diagnostics/digihealth/out/digihealth-1.0.1-os$os.elemod"
 
 cd "$loader"
 "$python" -m elekloader.sdk.build mods/core --stock "$stock"
+"$python" -m elekloader.sdk.build mods/machine-pages --stock "$stock"
 "$python" -m elekloader.sdk.build "$project/src" --stock "$stock" --out "$project/out"
 (
     cd "$project/diagnostics/digihealth"
@@ -40,11 +44,11 @@ cd "$loader"
 )
 # elekloader adds -os<version> only for a port's OS; name 1.53's files alike.
 if [ "$os" = 1.53 ]; then
-    mv -f "$project/out/dt-fm-1.1.0.elemod" "$dtfm"
+    mv -f "$project/out/dt-fm-1.2.0.elemod" "$dtfm"
     mv -f "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" "$health"
 fi
 
-"$python" -m elekloader.lint --stock "$stock" "$core" "$health" "$dtfm"
+"$python" -m elekloader.lint --stock "$stock" "$core" "$pages" "$health" "$dtfm"
 "$python" -m elekloader.patch --stock "$stock" \
-    --mod "$core" --mod "$health" --mod "$dtfm" \
+    --mod "$core" --mod "$pages" --mod "$health" --mod "$dtfm" \
     --out "$project/out/Digitakt_OS${os}_DT-FM_S034.syx" --version S034
