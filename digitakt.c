@@ -1,6 +1,11 @@
 /* SPDX-License-Identifier: MIT */
-/* Digitakt Mk1 OS 1.53 adapter for the four-operator FM engine. */
+/* Digitakt Mk1 OS 1.53 and 1.54 adapter for the four-operator FM engine. */
 #include "sophie.h"
+#ifdef OS154                        /* the Digitakt mk1 1.54 (mod.json's port) */
+#include "os154.h"
+#else                               /* the Digitakt mk1 1.53 */
+#include "os153.h"
+#endif
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -10,17 +15,17 @@ typedef unsigned long u32;
 
 #define DS_MACHINE 7
 #define TRACKS 8
-#define TBUF(t) ((s32 *)(unsigned long)(0x80001a18u + 128u * (u32)(t)))
-#define MACH(t) (*(volatile const u8 *)(unsigned long)(0x800018bcu + (u32)(t)))
-#define VP(t, o) (*(volatile const s16 *)(unsigned long)(0x80002794u + 106u * (u32)(t) + (u32)(o)))
-#define NOTE(t) (*(volatile const s32 *)(unsigned long)(0x80001f28u + 4u * (u32)(t)))
-#define VEL(t) (*(volatile const s16 *)(unsigned long)(0x80001f18u + 2u * (u32)(t)))
-#define TRIG_BITS (*(volatile const u32 *)(unsigned long)0x80001228u)
-#define AMP_LEVEL(t) (*(volatile const s32 *)(unsigned long)(0x4199df58u + 12u * (u32)(t)))
-#define AMP_PHASE(t) (*(volatile const s32 *)(unsigned long)(0x4199df54u + 12u * (u32)(t)))
-#define PITCH_TAB ((const u32 *)(unsigned long)0x4019b1c0u)
+#define TBUF(t) ((s32 *)(unsigned long)(OS_TBUF + 128u * (u32)(t)))
+#define MACH(t) (*(volatile const u8 *)(unsigned long)(OS_MACH + (u32)(t)))
+#define VP(t, o) (*(volatile const s16 *)(unsigned long)(OS_VP + 106u * (u32)(t) + (u32)(o)))
+#define NOTE(t) (*(volatile const s32 *)(unsigned long)(OS_NOTE + 4u * (u32)(t)))
+#define VEL(t) (*(volatile const s16 *)(unsigned long)(OS_VEL + 2u * (u32)(t)))
+#define TRIG_BITS (*(volatile const u32 *)(unsigned long)OS_TRIG_BITS)
+#define AMP_LEVEL(t) (*(volatile const s32 *)(unsigned long)(OS_AMP_LEVEL + 12u * (u32)(t)))
+#define AMP_PHASE(t) (*(volatile const s32 *)(unsigned long)(OS_AMP_PHASE + 12u * (u32)(t)))
+#define PITCH_TAB ((const u32 *)(unsigned long)OS_PITCH_TAB)
 /* The render's live sound per track: s16 params at +20 + 2*slot, machine at +126. */
-#define SOUND(t) (*(u8 *volatile const *)(unsigned long)(0x800019b4u + 4u * (u32)(t)))
+#define SOUND(t) (*(u8 *volatile const *)(unsigned long)(OS_SOUND + 4u * (u32)(t)))
 #define S_PARAM(s, slot) (*(volatile s16 *)((s) + 20 + 2 * (slot)))
 
 /* SLICE's persistent SRC slots: A..H.  Core makes those values recallable,
@@ -39,11 +44,11 @@ static struct ds_voice ds_voices[TRACKS];
 #define HID 112
 #define HID_MARK 0xd0u
 #define KITS 128
-#define LIVE_PROJECT ((const u8 *)0x409babfcu)
-#define KIT0 ((u8 *)0x4191e018u)
+#define LIVE_PROJECT ((const u8 *)OS_PROJECT)
+#define KIT0 ((u8 *)(OS_PROJECT + 0xf6341cu))
 #define KIT_SIZE 2334u
 #define SND_SIZE 162u
-#define LIVE_KIT (*(const u8 *volatile const *)0x800019acu)
+#define LIVE_KIT (*(const u8 *volatile const *)OS_LIVE_KIT)
 #define KIT_OPS (TRACKS * DS_OPS * 4)
 static const u8 ds_op_slot[4] = {0x13, 0x15, 0x16, 0x17};
 static const u8 ds_op_init[DS_OPS][4] = DS_OP_INIT;
@@ -139,7 +144,7 @@ char *ds_fmt_decay(char *out, s32 value)
 }
 
 /* Bitmap::fillRect(bmp, x0, y0, x1, y1, colour); y = 0 is the screen's bottom row. */
-#define FILL_RECT ((void (*)(void *, s32, s32, s32, s32, s32))0x400c19a6u)
+#define FILL_RECT ((void (*)(void *, s32, s32, s32, s32, s32))OS_FILL_RECT)
 /* ALGO's 17x17 diagrams as {x0, row0, x1, row1} boxes, row 0 on top:
  * modulators above their targets, carriers standing on the output bar. */
 static const u8 ds_algo_box[][4] = {
@@ -320,7 +325,7 @@ void ds_tick(void *ctrl)
 /* The power-up working copy: dumped to NAND at power-off and DESERIALIZEd
  * at boot, but re-serialized only on project load, so ds_wc_sync keeps our
  * kit tails in it current. The COKI checksum covers only its header. */
-#define WC_DATA ((u8 *)0x406481f8)
+#define WC_DATA ((u8 *)OS_WC_DATA)
 /* A stored kit's sounds: 160 bytes each from +36, SRC slot s at +28 + 2s. */
 #define SSND(rec, t) ((rec) + 36 + 160u * (t))
 

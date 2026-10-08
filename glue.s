@@ -1,5 +1,10 @@
 | SPDX-License-Identifier: MIT
 | DT-FM custom machine registration and post-playback render hook.
+        .ifdef  OS154                   | the Digitakt mk1 1.54 (mod.json's port)
+        .include "os154.inc"
+        .else                           | the Digitakt mk1 1.53
+        .include "os153.inc"
+        .endif
         .section .run, "ax"
         .globl ds_inject_s
 ds_inject_s:
@@ -8,10 +13,9 @@ ds_inject_s:
         jsr     ds_inject
         movem.l (%sp), %d0-%d7/%a0-%a6
         lea     60(%sp), %sp
-        lea     0x4199e444, %a4
+        lea     INJECT_A4, %a4
         rts
 
-        .equ BMP_VT, 0x401b73b4
         .balign 4
         .globl ds_machine
 ds_machine:
@@ -33,7 +37,6 @@ ds_icon_mask:
 | Dedicated DT-FM SRC layout and presentation.  All eight controls retain
 | SLICE's persistent storage slots, preserving locks and external control.
         .equ DS_ID,7
-        .equ LAY_SLICE,0x4197cf5c
         .equ P_TUNE,0x84
         .equ P_RATIO,0x85
         .equ P_INDEX,0x86
@@ -57,7 +60,7 @@ ds_layout:
         cmpi.l #DS_ID,%d0
         beq.s 1f
         moveq #3,%d1
-        jmp 0x400657d2
+        jmp LAYOUT_ON
 1:      tst.l ds_lay_ok
         bne.s 3f
         lea LAY_SLICE,%a0
@@ -91,14 +94,14 @@ ds_lab_short:
         bne.s 9f
         move.l 8(%sp),%d1
         cmpi.l #164,%d1
-        jmp 0x4000fe94
+        jmp LAB_SHORT_ON
 ds_lab_long:
         lea ds_long_tab,%a0
         bsr.s ds_pick
         bne.s 9f
         move.l 8(%sp),%d1
         cmpi.l #164,%d1
-        jmp 0x4000feb6
+        jmp LAB_LONG_ON
 9:      rts
 
 | The LFO destination renderer reads the shared SLICE parameter descriptor
@@ -117,11 +120,11 @@ ds_lfo_label:
         lea ds_short_tab,%a0
         move.l 0(%a0,%d1.l),%d1
         beq.s 8f                   | SAMP keeps its stock label
-        lea 0x401a9d9c,%a0
+        lea DESC_TAB,%a0
         move.l %d1,(%sp)            | replace the stock name argument
-        jmp 0x40060baa             | resume drawing at the next instruction
-8:      lea 0x401a9d9c,%a0
-        jmp 0x40060b94             | original descriptor lookup
+        jmp LFO_LABEL_ON           | resume drawing at the next instruction
+8:      lea DESC_TAB,%a0
+        jmp LFO_LABEL_ORIG         | original descriptor lookup
 
 | The destination popup formats rows separately as MACHINE:Parameter.
 | Its first and fallback draws both need DT-FM's full parameter names.
@@ -142,7 +145,7 @@ ds_chooser_name:
         move.l 0(%a0,%d1.l),%d0
         move.l #ds_short,%d6
         bra.s 2f
-1:      lea 0x401a9dc4,%a0          | descriptor table +40
+1:      lea DESC_TAB+40,%a0         | descriptor table +40
         move.l 0(%a0,%d0.l),%d0
 2:      move.l (%sp)+,%a0
         move.l (%sp)+,%d1
@@ -152,13 +155,13 @@ ds_lfo_popup_name:
         bsr ds_chooser_name
         move.l %d0,-(%sp)
         move.l %d6,-(%sp)
-        jmp 0x400a437a
+        jmp POPUP_NAME_ON
 ds_lfo_popup_fallback:
         move.l %d2,%d0
         bsr ds_chooser_name
         move.l %d0,-(%sp)
         move.l %d6,-(%sp)
-        jmp 0x400a43f6
+        jmp POPUP_FALLBACK_ON
 
 | The LFO overview uses descriptor fields +44 and +48 for its two-line DEST.
         .globl ds_lfo_overview_group,ds_lfo_overview_name
@@ -177,7 +180,7 @@ ds_lfo_overview_group:
 2:      move.l (%sp)+,%d1
         move.l %d0,-(%sp)
         move.l %d2,-(%sp)
-        jmp 0x40065dec
+        jmp OVERVIEW_GROUP_ON
 ds_lfo_overview_name:
         moveq #52,%d0
         muls.l %d0,%d3
@@ -196,12 +199,12 @@ ds_lfo_overview_name:
         lea ds_overview_tab,%a0
         move.l 0(%a0,%d1.l),%d0
         bra.s 2f
-1:      lea 0x401a9dcc,%a0          | descriptor table +48
+1:      lea DESC_TAB+48,%a0         | descriptor table +48
         move.l 0(%a0,%d3.l),%d0
 2:      move.l (%sp)+,%a0
         move.l (%sp)+,%d1
         move.l %d0,-(%sp)
-        jmp 0x40065e68
+        jmp OVERVIEW_NAME_ON
 
 ds_is_control:
         moveq #DS_ID,%d1
@@ -215,7 +218,6 @@ ds_is_control:
         rts
 8:      moveq #0,%d1
         rts
-        .equ NUM_BOX,0x400607fa      | SAMP's knob: (fn, value, canvas, x, y, flag)
         .globl ds_knob_gfx
 ds_knob_gfx:
         move.l 8(%sp),%d0
@@ -257,7 +259,7 @@ ds_knob_gfx:
         move.l %d0,8(%sp)
 2:      lea -20(%sp),%sp
         movem.l %d2-%d6,(%sp)
-        jmp 0x4000f2c4
+        jmp KNOB_GFX_ON
         .globl ds_ui_rec
 ds_ui_rec:
         move.l 4(%sp),%d0
@@ -269,7 +271,7 @@ ds_ui_rec:
         bra.s 2f
 1:      move.l 4(%sp),%d1
 2:      cmpi.l #164,%d1
-        jmp 0x4006579e
+        jmp UI_REC_ON
 
 | Replaces SamplePageView's cmpi.l #135 (SAMP): Z=1 opens the sample list.
         .globl ds_samp_chk0,ds_samp_chk2
@@ -289,10 +291,6 @@ ds_samp_chk0:
 | SERIALIZE(data, project, a, flags, cb) and DESERIALIZE(project, data, cb),
 | hooked at entry, and KIT_SAVE(rec, kit, flags) and KIT_LOAD(kit, rec):
 | the hidden operators ride in the stored kits' unused tails.
-        .equ SERIALIZE,0x4007f30a
-        .equ DESERIALIZE,0x4007efe8
-        .equ KIT_SAVE,0x4007a6a6
-        .equ KIT_LOAD,0x4007a4ce
         .globl ds_proj_save,ds_proj_load,ds_kit_save,ds_kit_load
 ds_proj_save:
         move.l 20(%sp),-(%sp)
@@ -377,7 +375,7 @@ ds_prange_f:
 1:      move.l %a1,-(%sp)
         move.l %a0,-(%sp)
         move.l 12(%sp),-(%sp)
-        jsr 0x40078f0c
+        jsr PRANGE_FN
         addq.l #4,%sp
         movea.l (%sp)+,%a0
         movea.l (%sp)+,%a1
@@ -387,11 +385,11 @@ ds_prange_f:
         cmpi.l #P_TONE,%d1
         bhi.s 9f
         move.l (%a1),%d0
-        cmpi.l #0x4017eb58,%d0
+        cmpi.l #PARAM_VT,%d0
         bne.s 9f
         movea.l 16(%a1),%a1
         move.l (%a1),%d0
-        cmpi.l #0x40181330,%d0
+        cmpi.l #SNDREF_VT,%d0
         bne.s 9f
         movea.l 16(%a1),%a1
         moveq #0,%d0
@@ -448,7 +446,7 @@ ds_val_text:
         rts
 1:      lea -20(%sp),%sp
         movem.l %d2-%d4/%a2-%a3,(%sp)
-        jmp 0x4000f32c
+        jmp VAL_TEXT_ON
 ds_pop_text:
         move.l 4(%sp),%d0
         cmpi.l #P_RATIO,%d0
@@ -487,7 +485,7 @@ ds_pop_text:
         rts
 1:      move.l 4(%sp),%d1
         cmpi.l #164,%d1
-        jmp 0x400657f8
+        jmp POP_TEXT_ON
         .balign 4
 ds_short_tab: .long ds_s_tune,ds_s_algo,ds_s_ratio,ds_s_op,ds_s_level,ds_s_attack,ds_s_decay,ds_s_char
 ds_long_tab: .long ds_l_tune,ds_l_algo,ds_l_ratio,ds_l_op,ds_l_level,ds_l_attack,ds_l_decay,ds_l_char

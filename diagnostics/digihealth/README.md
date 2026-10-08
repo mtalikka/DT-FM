@@ -5,7 +5,7 @@
 > saying “on by default” do not apply to the DT-FM build. See
 > [the local diagnostic notes](../README.md).
 
-A performance and diagnostics mod for the Digitakt (mk1), OS 1.53. It adds
+A performance and diagnostics mod for the Digitakt (mk1), OS 1.53 and 1.54. It adds
 two rows to SETTINGS:
 
 - **FAST AUDIO** (on by default) runs the audio render's hot code from the
@@ -99,7 +99,7 @@ You need three things:
 - **This mod:** `digihealth-1.0.elemod` for the Digitakt mk1, or
   `digihealth-1.1.elemod` for the Digitone mk1, from
   [this repository's releases](https://github.com/irpina/digihealth/releases/latest).
-- **The stock OS file:** `Digitakt_OS1.53.syx`, from
+- **The stock OS file:** `Digitakt_OS1.54.syx` or `Digitakt_OS1.53.syx`, from
   [Elektron's Digitakt downloads](https://www.elektron.se/support-downloads/digitakt),
   or `Digitone_and_Digitone_Keys_OS1.43.syx`, from Elektron's Digitone
   downloads (the `.zip` works as it is). elekloader recognises the file by
@@ -149,6 +149,7 @@ Windows, inside WSL) and elekloader, importable (installed, or on
 
 ```bash
 python build.py --stock Digitakt_OS1.53.syx      # -> out/digihealth-1.0.elemod
+python build.py --stock Digitakt_OS1.54.syx      # -> out/digihealth-1.0-os1.54.elemod
 python build.py --stock Digitone_and_Digitone_Keys_OS1.43.syx   # -> out/digihealth-1.1.elemod
 python -m elekloader.lint out/digihealth-1.0.elemod --stock Digitakt_OS1.53.syx --with core-2.0a.elemod
 ```
@@ -164,11 +165,11 @@ them to elekloader's SDK.
 
 | file | |
 |---|---|
-| `mod.json` | the mod: its sites, handlers, tables and resources; `fast_audio` is `build.py`'s input |
+| `mod.json` | the mod: its sites, handlers, tables and resources; `fast_audio` is `build.py`'s input; under `ports`, 1.54's sites |
 | `build.py` | FAST AUDIO's plan from the stock file, then the SDK |
 | `fastaudio.s` | the FAST AUDIO row, the copy, the stubs' switch and the watchdog |
 | `sysinfo.s` | the SYSTEM INFO row and readout, the render and idle timing, the USB channel |
-| `os153.inc` | the stock routines it calls |
+| `os153.inc`, `os154.inc` | the stock routines it calls, for each OS (1.54's port defines `OS154`) |
 | `dn1/mod.json`, `dn1/dn143.inc` | the Digitone mk1's mod (SYSTEM INFO; `sysinfo.s` with `DN143`) and its stock routines |
 | `tools/digiusb.py`, `tools/winmidi.py` | the USB channel's other end |
 

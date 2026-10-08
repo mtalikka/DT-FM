@@ -1,7 +1,7 @@
 # DT-FM for Digitakt
 
 DT-FM is a four-operator FM synth machine for the original Digitakt
-(Mk1), OS 1.53. It replaces the earlier Sophie-based voice with a dedicated
+(Mk1), OS 1.53 and 1.54. It replaces the earlier Sophie-based voice with a dedicated
 FM engine and keeps Digitakt's regular AMP, filter, mixer and effects path.
 The source, not a modified Elektron OS, is what this repository distributes.
 
@@ -10,7 +10,9 @@ The source, not a modified Elektron OS, is what this repository distributes.
 - **1.0.1 (firmware S034):** The hidden operators ride in each sound, so
   every pattern keeps its own and copying a sound, track or pattern brings
   all four. Fixed the operator OP shows coming back with older values after
-  a power cycle.
+  a power cycle. DT-FM and the optional diagnostic also build for OS 1.54,
+  from the same source and with the same behavior: one `.elemod` for each
+  OS. The 1.54 files need elekloader 0.4.0 or later.
 - **1.0.0 (firmware S034):** First DT-FM release. Replaced the Sophie voice
   code with a dedicated 4-op FM machine (formerly FM2OP; its projects keep
   working). OP shows the selected operator's number, ALGO draws its routing,
@@ -96,22 +98,28 @@ Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 
 ## Install: no compiler required
 
-You need only the prebuilt
-[DT-FM mod](https://github.com/mtalikka/DT-FM/releases/download/v1.0.0/dt-fm-1.0.0.elemod),
-[elekloader](https://github.com/irpina/elekloader/releases/latest), and your
-own original Digitakt Mk1 OS 1.53 `.syx`
+You need only the prebuilt DT-FM mod for your OS
+([OS 1.53](https://github.com/mtalikka/DT-FM/releases/download/v1.0.0/dt-fm-1.0.0.elemod);
+for OS 1.54, the `-os1.54` file on the
+[releases page](https://github.com/mtalikka/DT-FM/releases)),
+[elekloader](https://github.com/irpina/elekloader/releases/latest)
+(0.4.0 or later for OS 1.54), and your own original Digitakt Mk1 OS 1.53
+or 1.54 `.syx`.
 The `.elemod` contains this project's code, **not** Elektron's firmware.
 You do not need ColdFire tools, Python, or a source checkout to install it.
 
 1. Open elekloader and select your stock OS using **Add its stock OS file**.
-2. From the mod list, choose **Add your own .elemod** and select `dt-fm-1.0.0.elemod`.
+2. From the mod list, choose **Add your own .elemod** and select `dt-fm-1.0.0.elemod`
+   (OS 1.53) or `dt-fm-1.0.1-os1.54.elemod` (OS 1.54). elekloader refuses
+   the file made for the other OS.
    Enable DT-FM. elekloader's built-in **core 2.1** should enable with it.
    If elekloader still lists the earlier `digisophie` mod (FM2OP), disable
    it: both add machine 7.
    If your elekloader has an older core or shows a dependency error, update
    elekloader before building.
-3. Optional: install and enable the bundled
-   [digihealth diagnostic](release/digihealth-1.0.1.elemod) too. This is
+3. Optional: install and enable the bundled digihealth diagnostic for your OS
+   ([OS 1.53](release/digihealth-1.0.1.elemod),
+   [OS 1.54](release/digihealth-1.0.1-os1.54.elemod)) too. This is
    the configuration used for the earlier S027 hardware test. It adds SYSTEM INFO
    and an opt-in FAST AUDIO setting; without it DT-FM still works.
 4. Wait for elekloader's **Ready to build** check, then choose **Build Firmware**.
@@ -128,29 +136,40 @@ ColdFire tools are needed only to change or recompile the mod. You need
 Python 3.9+, a source checkout of
 [elekloader](https://github.com/irpina/elekloader), a ColdFire cross-toolchain
 (`m68k-linux-gnu-` or `m68k-elf-` assembler, GCC and linker), and your own
-stock OS 1.53 file. From this repository:
+stock OS 1.53 or 1.54 file. For 1.54, use elekloader 0.4.0 or later. From
+this repository:
 
 ```sh
 ELEKLOADER_CROSS=m68k-elf- sh scripts/build.sh \
-  /path/to/your/Digitakt_OS1.53.syx /path/to/elekloader
+  /path/to/your/Digitakt_OS1.54.syx /path/to/elekloader
 ```
 
-This builds core 2.1, DT-FM and the optional diagnostic from source,
-lints the combination, and writes the verified custom OS to
-`out/Digitakt_OS1.53_DT-FM_S034.syx`. To test DSP alone, run `make test`;
+This builds core 2.1, DT-FM and the optional diagnostic from source for the
+OS of the file you give it, lints the combination, and writes the verified
+custom OS to `out/Digitakt_OS1.54_DT-FM_S034.syx` (`1.53` for a 1.53 file).
+The 1.54 mods are named `-os1.54`, e.g. `out/dt-fm-1.0.1-os1.54.elemod`.
+To test DSP alone, run `make test`;
 `make cross-check` additionally compiles for ColdFire. Optional emulator
 probes in `tests/` require [digiemu](https://github.com/irpina/digiemu).
 
 ## Use and recovery
 
 This changes firmware on the instrument. Back up projects and sounds first,
-check that your stock OS is OS 1.53 for the *original* Digitakt, and keep
+check that your stock OS is OS 1.53 or 1.54 for the *original* Digitakt, and keep
 that stock file for recovery. If you install the optional diagnostic,
 FAST AUDIO is off by default; SYSTEM INFO and FAST AUDIO can be enabled
 separately in SETTINGS. See [diagnostics](diagnostics/README.md) for the monitor.
 
 DT-FM is independent of, and not endorsed by, Elektron. It contains no
 Elektron firmware or samples.
+
+## Source layout
+
+The Digitakt addresses DT-FM uses are kept apart from the code that uses
+them: `os153.inc` / `os154.inc` for `glue.s`, `os153.h` / `os154.h` for
+`digitakt.c`. The OS 1.54 build defines `OS154` (`mod.json`, under
+`ports`), which picks the 1.54 files and the 1.54 patch sites; the OS 1.53
+build is unchanged. The bundled digihealth is split the same way.
 
 ## Source and licenses
 
