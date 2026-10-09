@@ -12,6 +12,7 @@ stock=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 loader=$(cd "$2" && pwd)
 project=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 python=${PYTHON_BIN:-python3}
+dtfm_version="1.2.1"
 
 if [ ! -f "$stock" ] || [ ! -f "$loader/elekloader/sdk/build.py" ]; then
     echo "Expected a stock OS file and an elekloader source checkout." >&2
@@ -31,7 +32,7 @@ case "$os" in
 esac
 core="$loader/mods/core/out/core-3.0$port.elemod"
 pages="$loader/mods/machine-pages/out/machine-pages-1.1$port.elemod"
-dtfm="$project/out/dt-fm-1.2.0-os$os.elemod"
+dtfm="$project/out/dt-fm-$dtfm_version-os$os.elemod"
 health="$project/diagnostics/digihealth/out/digihealth-1.0.1-os$os.elemod"
 
 cd "$loader"
@@ -44,7 +45,7 @@ cd "$loader"
 )
 # elekloader adds -os<version> only for a port's OS; name 1.53's files alike.
 if [ "$os" = 1.53 ]; then
-    mv -f "$project/out/dt-fm-1.2.0.elemod" "$dtfm"
+    mv -f "$project/out/dt-fm-$dtfm_version.elemod" "$dtfm"
     mv -f "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" "$health"
 fi
 

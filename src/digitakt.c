@@ -28,12 +28,17 @@ typedef unsigned long u32;
 /* The render's live sound per track: s16 params at +20 + 2*slot, machine at +126. */
 #define SOUND(t) (*(u8 *volatile const *)(unsigned long)(OS_SOUND + 4u * (u32)(t)))
 #define S_PARAM(s, slot) (*(volatile s16 *)((s) + 20 + 2 * (slot)))
+/* The voice's copy of the sound its trig took, with the trig's locks, read as a sound,
+ * and the slots those locks hold (bit s for slot s). */
+#define VOICE_SND(t) ((const u8 *)(unsigned long)(OS_VOICE_SND - 20u + 106u * (u32)(t)))
+#define LOCKED(t) (*(volatile const u32 *)(unsigned long)(OS_LOCKS + 8u * (u32)(t)))
 
 /* SLICE's persistent SRC slots: A..H.  Core makes those values recallable,
  * lockable and reachable via MIDI CC/NRPN for custom machines. */
 #define P_TUNE 0
 #define P_ALGO 2
 #define P_CHAR 14
+#define S_KNOB(k) (0x11u + (k))
 #define S_OP 0x14
 #define DS_OP_INIT {{16, 127, 0, 127}, {16, 80, 0, 90}, {36, 40, 0, 70}, {16, 30, 0, 60}}
 
@@ -296,6 +301,15 @@ static u32 ds_pitch_ratio(s32 track)
     return ratio;
 }
 
+/* The trig's locks on RATIO, LEVEL, ATTK and DECAY go to the operator its OP selects. */
+static void ds_lock_ops(s32 track, u8 o[DS_OPS][4])
+{
+    const u8 *v = VOICE_SND(track);
+    u32 locked = LOCKED(track), sel = ds_op_sel(v), j;
+    for (j = 0; j < 4u; ++j)
+        if (locked & (1u << ds_op_slot[j])) o[sel][j] = (u8)ds_s7(v, ds_op_slot[j]);
+}
+
 static void ds_read_params(s32 track, struct ds_params *p)
 {
     u32 k;
@@ -303,8 +317,8 @@ static void ds_read_params(s32 track, struct ds_params *p)
     u32 phase_inc = ratio >> 23;
     const u8 *s = SOUND(track);
     u8 ops[DS_OPS][4];
-    if (s) ds_sound_ops(s, ops);
-    else for (k = 0; k < sizeof ops; ++k) (&ops[0][0])[k] = (&ds_op_init[0][0])[k];
+    ds_sound_ops(s ? s : VOICE_SND(track), ops);
+    ds_lock_ops(track, ops);
     if (phase_inc < 8) phase_inc = 8;
     if (phase_inc > 32767u) phase_inc = 32767u;
     p->phase_inc = (u16)phase_inc; /* 50 Hz is 68 phase units/sample. */
@@ -347,13 +361,39 @@ void ds_inject(int32_t *blocks)
 
 static void ds_wc_sync(void);
 
+/* The machine menu turned a track to DT-FM: the firmware set TUNE and E-H to SLICE's defaults
+ * (0, 0, 0, 0, 100) and kept B-D, so start B-H and every operator at DT-FM's. A loaded or
+ * pasted sound holds its own values and is kept. */
+static int ds_switched(u8 *s)
+{
+    u32 k;
+    if (S_PARAM(s, S_KNOB(0)) != 0x4000 || S_PARAM(s, S_KNOB(4)) || S_PARAM(s, S_KNOB(5))
+        || S_PARAM(s, S_KNOB(6)) || S_PARAM(s, S_KNOB(7)) != 0x6400)
+        return 0;
+    for (k = 1; k < 8u; ++k) S_PARAM(s, S_KNOB(k)) = (s16)ds_page.knob[k].def;
+    ds_sound_hide(s, ds_op_init, 0);
+    return 1;
+}
+
+static const u8 *ds_seen_kit;
+static u8 ds_seen[TRACKS];
+
+/* The UI kit's sounds, which the SRC page edits: a track's render sound is 0 until its trig. */
 void ds_tick(void *ctrl)
 {
-    u32 t, sel, redraw = 0;
-    for (t = 0; t < TRACKS; ++t) {
-        u8 *s = SOUND(t);
+    u8 *kit = fw_kit;
+    u32 t, sel, redraw = 0, same = kit == ds_seen_kit;
+    ds_seen_kit = kit;
+    for (t = 0; kit && t < TRACKS; ++t) {
+        u8 *s = FW_SOUND(kit, t);
         u8 o[DS_OPS][4];
-        if (!s || s[126] != DS_MACHINE) continue;
+        u32 was = ds_seen[t];
+        ds_seen[t] = s[126];
+        if (s[126] != DS_MACHINE) continue;
+        if (same && was != DS_MACHINE && ds_switched(s)) {
+            redraw = 1;
+            continue;
+        }
         sel = ds_op_sel(s);
         if ((s[HID] & 0xfcu) == HID_MARK && (s[HID] & 3u) == sel) continue;
         ds_sound_ops(s, o);
@@ -472,14 +512,14 @@ static void ds_wc_kit(u32 k)
     u8 *rec = WC_DATA + SKIT0 + SKIT_SIZE * k, *kit = KIT0 + KIT_SIZE * k;
     u8 *b = rec + SKIT_GAP, cur[KIT_OPS];
     u32 i, t;
-    /* An OP swap writes the knobs behind the OS, which never records them. */
+    /* OP swaps and switches to DT-FM write the knobs behind the OS, which never records them. */
     for (t = 0; t < TRACKS; ++t) {
         const u8 *s = kit + 32 + SND_SIZE * t;
         u8 *srec = SSND(rec, t);
         if (s[126] != DS_MACHINE || srec[124] != DS_MACHINE) continue;
-        for (i = 0; i < 4u; ++i) {
-            s16 *v = (s16 *)(srec + 28 + 2 * ds_op_slot[i]);
-            if (*v != S_PARAM(s, ds_op_slot[i])) *v = S_PARAM(s, ds_op_slot[i]);
+        for (i = S_KNOB(1); i <= S_KNOB(7); ++i) {
+            s16 *v = (s16 *)(srec + 28 + 2 * i);
+            if (*v != S_PARAM(s, i)) *v = S_PARAM(s, i);
         }
     }
     ds_kit_ops(kit, cur);

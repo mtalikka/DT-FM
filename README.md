@@ -7,7 +7,13 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 ## Changelog
 
-- **1.2.0 (firmware S034, a preview):** elekloader can't build it yet: it
+- **1.2.1:** RATIO, LEVEL, ATTK and DECAY can be parameter-locked
+  ([#1](https://github.com/mtalikka/DT-FM/issues/1)). On a track just
+  switched to DT-FM, OP shows each operator's own values at once instead of
+  after the track's first trig, and every operator starts at its default
+  instead of at SLICE's (LEVEL 0, DECAY 0)
+  ([#2](https://github.com/mtalikka/DT-FM/issues/2)).
+- **1.2.0:** elekloader can't build it yet: it
   needs core 3.0 and machine-pages 1.1, which no elekloader release has.
   Until one does, install 1.1.0. Built for elekloader's
   core 3.0 and machine-pages 1.1, which draw DT-FM's SRC page, so it shares
@@ -17,15 +23,15 @@ The source, not a modified Elektron OS, is what this repository distributes.
   DT-FM is now machine 9; it was 7, SOPHIE's. Tracks saved as DT-FM by 1.1.0
   or earlier load as another machine (SOPHIE if it is installed, else
   ONESHOT): select DT-FM on them again and re-set their sound if needed.
-- **1.1.0 (firmware S034):** DT-FM and the optional diagnostic also build
+- **1.1.0:** DT-FM and the optional diagnostic also build
   for OS 1.54, from the same source and with the same behavior: one
   `.elemod` for each OS, named for it (`-os1.53`, `-os1.54`). The 1.54
   files need elekloader 0.4.0 or later.
-- **1.0.1 (firmware S034):** The hidden operators ride in each sound, so
+- **1.0.1:** The hidden operators ride in each sound, so
   every pattern keeps its own and copying a sound, track or pattern brings
   all four. Fixed the operator OP shows coming back with older values after
   a power cycle.
-- **1.0.0 (firmware S034):** First DT-FM release. Replaced the Sophie voice
+- **1.0.0:** First DT-FM release. Replaced the Sophie voice
   code with a dedicated 4-op FM machine (formerly FM2OP; its projects keep
   working). OP shows the selected operator's number, ALGO draws its routing,
   and the hidden operators survive a power cycle.
@@ -65,12 +71,16 @@ a part of each pattern's stored kit that the stock OS neither writes nor
 reads, and survive a power cycle like any unsaved edit. The sound pool
 keeps only the operator OP shows: a pool sound's other three start at
 defaults, as in a project saved without DT-FM. A project from the earlier
-build that kept them per track gives every pattern its tracks' old values. TUNE, ALGO and CHAR can be
-parameter-locked; the per-operator controls cannot yet. The normal AMP page controls
-the note envelope: set HOLD to `NOTE` for TRIG LEN to determine when the
-release begins. Use a finite DEC to hear that release. DEC `INF` can keep
-the sound going indefinitely. Retriggering chokes the previous voice on
-that track, with a brief transition to suppress a click.
+build that kept them per track gives every pattern its tracks' old values.
+Every SRC control can be parameter-locked. A trig's RATIO, LEVEL, ATTK and
+DECAY locks change the operator OP selects on that trig: lock OP as well
+to pick it, or they change the operator OP shows when the trig plays. A
+track switched to DT-FM starts with every operator at its default. The
+normal AMP page controls the note envelope: set HOLD to `NOTE` for TRIG
+LEN to determine when the release begins. Use a finite DEC to hear that
+release. DEC `INF` can keep the sound going indefinitely. Retriggering
+chokes the previous voice on that track, with a brief transition to
+suppress a click.
 
 ## Algorithms
 
@@ -115,12 +125,12 @@ elekloader can't build it yet: it needs core 3.0 and machine-pages 1.1,
 which are in elekloader's source but in no elekloader release. The app and
 the web page refuse 1.2.0 until one has them.
 
-You need only the prebuilt DT-FM mod for your OS, `dt-fm-1.1.0-os1.53.elemod`
-or `dt-fm-1.1.0-os1.54.elemod` from the
-[1.1.0 release](https://github.com/mtalikka/DT-FM/releases/tag/v1.1.0),
+You need only the prebuilt DT-FM mod for your OS, `dt-fm-1.2.1-os1.53.elemod`
+or `dt-fm-1.2.1-os1.54.elemod` from the
+[1.2.1 release](https://github.com/mtalikka/DT-FM/releases/tag/v1.2.1),
 [elekloader](https://github.com/irpina/elekloader/releases/latest)
 (0.4.0 or later for OS 1.54), and your own original Digitakt Mk1 OS 1.53
-or 1.54 `.syx`. DT-FM 1.1.0 is also in elekloader's shop, so on
+or 1.54 `.syx`. DT-FM is also in elekloader's shop, so on
 [elekloader's web page](https://irpina.github.io/elekloader/) you can add it
 from the library instead of downloading it.
 The `.elemod` contains this project's code, **not** Elektron's firmware.
@@ -128,18 +138,12 @@ You do not need ColdFire tools, Python, or a source checkout to install it.
 
 1. Open elekloader and select your stock OS using **Add its stock OS file**.
 2. Choose **Add from the library** and add DT-FM, or choose **Add your own
-   .elemod** and select the 1.1.0 file for your OS. elekloader refuses the
+   .elemod** and select the .elemod file for your OS. elekloader refuses the
    file made for the other OS.
-   Enable DT-FM. elekloader's built-in **core 2.1** should enable with it.
-   If elekloader still lists the earlier `digisophie` mod (FM2OP), disable
-   it: both add machine 7.
+   Enable DT-FM. elekloader's built-in **core 3.0** should enable with it.
    If your elekloader has an older core or shows a dependency error, update
    elekloader before building.
-3. Optional: install and enable the bundled digihealth diagnostic for your OS
-   ([OS 1.53](release/digihealth-1.0.1-os1.53.elemod),
-   [OS 1.54](release/digihealth-1.0.1-os1.54.elemod)) too. This is
-   the configuration used for the earlier S027 hardware test. It adds SYSTEM INFO
-   and an opt-in FAST AUDIO setting; without it DT-FM still works.
+3. Optional but highly recommended: install and enable the bundled digihealth diagnostic for your OS too. This adds the FAST AUDIO feature available from the settings menu. Enabling this allows several DT-FM tracks to play simultaneously without freezing the Digitakt. 
 4. Wait for elekloader's **Ready to build** check, then choose **Build Firmware**.
    Save the generated `.syx` on your computer.
 6. Send that `.syx` to the Digitakt with Elektron Transfer
