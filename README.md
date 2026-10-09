@@ -7,6 +7,12 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 ## Changelog
 
+- **Unreleased:** RATIO, LEVEL, ATTK and DECAY can be parameter-locked
+  ([#1](https://github.com/mtalikka/DT-FM/issues/1)). On a track just
+  switched to DT-FM, OP shows each operator's own values at once instead of
+  after the track's first trig, and every operator starts at its default
+  instead of at SLICE's (LEVEL 0, DECAY 0)
+  ([#2](https://github.com/mtalikka/DT-FM/issues/2)).
 - **1.2.0 (firmware S034, a preview):** elekloader can't build it yet: it
   needs core 3.0 and machine-pages 1.1, which no elekloader release has.
   Until one does, install 1.1.0. Built for elekloader's
@@ -65,12 +71,16 @@ a part of each pattern's stored kit that the stock OS neither writes nor
 reads, and survive a power cycle like any unsaved edit. The sound pool
 keeps only the operator OP shows: a pool sound's other three start at
 defaults, as in a project saved without DT-FM. A project from the earlier
-build that kept them per track gives every pattern its tracks' old values. TUNE, ALGO and CHAR can be
-parameter-locked; the per-operator controls cannot yet. The normal AMP page controls
-the note envelope: set HOLD to `NOTE` for TRIG LEN to determine when the
-release begins. Use a finite DEC to hear that release. DEC `INF` can keep
-the sound going indefinitely. Retriggering chokes the previous voice on
-that track, with a brief transition to suppress a click.
+build that kept them per track gives every pattern its tracks' old values.
+Every SRC control can be parameter-locked. A trig's RATIO, LEVEL, ATTK and
+DECAY locks change the operator OP selects on that trig: lock OP as well
+to pick it, or they change the operator OP shows when the trig plays. A
+track switched to DT-FM starts with every operator at its default. The
+normal AMP page controls the note envelope: set HOLD to `NOTE` for TRIG
+LEN to determine when the release begins. Use a finite DEC to hear that
+release. DEC `INF` can keep the sound going indefinitely. Retriggering
+chokes the previous voice on that track, with a brief transition to
+suppress a click.
 
 ## Algorithms
 

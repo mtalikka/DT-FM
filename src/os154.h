@@ -7,6 +7,8 @@
 #define OS_VEL         0x80001f18u   /* its velocity, 8.8 */
 #define OS_TRIG_BITS   0x80001228u   /* this block's trigs, one bit per track */
 #define OS_SOUND       0x800019b4u   /* the render's sound per track */
+#define OS_VOICE_SND   0x80001502u   /* the voice's copy of its sound's slots, with its trig's locks, 106 bytes a track */
+#define OS_LOCKS       0x4399eb14u   /* the slots the trig's locks hold, 64 bits a track */
 #define OS_LIVE_KIT    0x800019acu   /* the render's kit */
 #define OS_AMP_LEVEL   0x4199ef58u   /* the AMP envelope's level, 12 bytes a track */
 #define OS_AMP_PHASE   0x4199ef54u   /* the AMP envelope's phase, 12 bytes a track */
