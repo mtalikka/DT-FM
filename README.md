@@ -7,34 +7,14 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 ## Changelog
 
-- **1.2.1:** RATIO, LEVEL, ATTK and DECAY can be parameter-locked
-  ([#1](https://github.com/mtalikka/DT-FM/issues/1)). On a track just
-  switched to DT-FM, OP shows each operator's own values at once instead of
-  after the track's first trig, and every operator starts at its default
-  instead of at SLICE's (LEVEL 0, DECAY 0)
-  ([#2](https://github.com/mtalikka/DT-FM/issues/2)).
-- **1.2.0:** elekloader can't build it yet: it
-  needs core 3.0 and machine-pages 1.1, which no elekloader release has.
-  Until one does, install 1.1.0. Built for elekloader's
-  core 3.0 and machine-pages 1.1, which draw DT-FM's SRC page, so it shares
-  a build with other machines made for them, such as SOPHIE's machine-pages
-  build once its author publishes it. ALGO's diagram and OP's number are
-  drawn as before, through machine-pages 1.1's knobs that draw themselves.
-  DT-FM is now machine 9; it was 7, SOPHIE's. Tracks saved as DT-FM by 1.1.0
-  or earlier load as another machine (SOPHIE if it is installed, else
-  ONESHOT): select DT-FM on them again and re-set their sound if needed.
-- **1.1.0:** DT-FM and the optional diagnostic also build
-  for OS 1.54, from the same source and with the same behavior: one
-  `.elemod` for each OS, named for it (`-os1.53`, `-os1.54`). The 1.54
-  files need elekloader 0.4.0 or later.
-- **1.0.1:** The hidden operators ride in each sound, so
-  every pattern keeps its own and copying a sound, track or pattern brings
-  all four. Fixed the operator OP shows coming back with older values after
-  a power cycle.
-- **1.0.0:** First DT-FM release. Replaced the Sophie voice
-  code with a dedicated 4-op FM machine (formerly FM2OP; its projects keep
-  working). OP shows the selected operator's number, ALGO draws its routing,
-  and the hidden operators survive a power cycle.
+- **1.2.1:**
+  -  Added support for parameter locks on SRC page ([#1](https://github.com/mtalikka/DT-FM/issues/1))
+  -  Fixed an issue with visual feedback of operator parameters ([#2](https://github.com/mtalikka/DT-FM/issues/2))
+- **1.2.0:** Compatibility changes for cooperation with other Elekloader mods
+- **1.1.0:** Added support for OS version 1.54
+- **1.0.1:** Fixed operator values changing after a power cycle
+- **1.0.0:** Initial release. Replaced the Sophie voice
+  code with a dedicated 4-op FM machine
 
 ---
 
