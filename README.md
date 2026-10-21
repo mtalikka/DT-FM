@@ -170,13 +170,25 @@ ELEKLOADER_CROSS=m68k-elf- sh scripts/build.sh \
 This builds core 3.0, machine-pages 1.1, DT-FM and the optional diagnostic
 from source for the OS of the file you give it, lints the combination, and
 writes the verified custom OS to `out/Digitakt_OS1.54_DT-FM_S034.syx`. Your
-elekloader checkout must have core 3.0 and machine-pages 1.1, as its main
-branch has. This is how to run 1.2.0 before an elekloader release can. The mods are
+elekloader checkout must have core 3.0 and machine-pages 1.1; the compatible
+source tree is tagged `kit-v0.5.0`. This is how to run 1.2.0 before an
+elekloader release can. The mods are
 named for the OS too: `out/dt-fm-1.2.0-os1.54.elemod` and
 `diagnostics/digihealth/out/digihealth-1.0.1-os1.54.elemod` (`1.53` for a
 1.53 file). To test DSP alone, run `make test`;
 `make cross-check` additionally compiles for ColdFire. Optional emulator
 probes in `tests/` require [digiemu](https://github.com/irpina/digiemu).
+
+On Windows with Docker Desktop, the container provides the compiler and
+elekloader checkout. Provide your own stock OS file; it is mounted read-only
+and is not included in the image:
+
+```powershell
+.\scripts\docker-build.ps1 .\firmware\Digitakt_OS1.54.syx
+```
+
+The verified custom OS and `.elemod` files are written under `out/` and
+`diagnostics/digihealth/out/` in this checkout. Docker must be running.
 
 ## Use and recovery
 
