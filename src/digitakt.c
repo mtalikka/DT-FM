@@ -310,6 +310,20 @@ static void ds_lock_ops(s32 track, u8 o[DS_OPS][4])
         if (locked & (1u << ds_op_slot[j])) o[sel][j] = (u8)ds_s7(v, ds_op_slot[j]);
 }
 
+/* The LFOs on RATIO, LEVEL, ATTK and DECAY move the operator OP selects: the render's
+ * voice parameters hold the trig's value plus the LFO, the voice's sound the trig's alone. */
+static void ds_lfo_ops(s32 track, u8 o[DS_OPS][4])
+{
+    const u8 *v = VOICE_SND(track);
+    u32 sel = ds_op_sel(v), j;
+    for (j = 0; j < 4u; ++j) {
+        s32 d = (s32)ds_u7(track, 2 * (ds_op_slot[j] - S_KNOB(0)))
+            - (s32)ds_s7(v, ds_op_slot[j]);
+        s32 x = (s32)o[sel][j] + d;
+        o[sel][j] = (u8)(x < 0 ? 0 : x > 127 ? 127 : x);
+    }
+}
+
 static void ds_read_params(s32 track, struct ds_params *p)
 {
     u32 k;
@@ -319,6 +333,7 @@ static void ds_read_params(s32 track, struct ds_params *p)
     u8 ops[DS_OPS][4];
     ds_sound_ops(s ? s : VOICE_SND(track), ops);
     ds_lock_ops(track, ops);
+    ds_lfo_ops(track, ops);
     if (phase_inc < 8) phase_inc = 8;
     if (phase_inc > 32767u) phase_inc = 32767u;
     p->phase_inc = (u16)phase_inc; /* 50 Hz is 68 phase units/sample. */
