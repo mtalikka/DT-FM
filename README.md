@@ -1,11 +1,13 @@
 # DT-FM for Digitakt
 
-[![Build checks](https://github.com/mtalikka/DT-FM/actions/workflows/build.yml/badge.svg)](https://github.com/mtalikka/DT-FM/actions/workflows/build.yml)
+<img width="672" height="352" alt="m4f80cd2dd1a6" src="https://github.com/user-attachments/assets/3540c645-bca7-42d3-bc2d-7a29128d30d7" />
 
 DT-FM is a four-operator FM synth machine for the original Digitakt
 (Mk1), OS 1.53 and 1.54. It replaces the earlier Sophie-based voice with a dedicated
 FM engine and keeps Digitakt's regular AMP, filter, mixer and effects path.
 The source, not a modified Elektron OS, is what this repository distributes.
+
+[![Build checks](https://github.com/mtalikka/DT-FM/actions/workflows/build.yml/badge.svg)](https://github.com/mtalikka/DT-FM/actions/workflows/build.yml)
 
 ## Changelog
 
