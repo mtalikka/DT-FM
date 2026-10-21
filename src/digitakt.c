@@ -271,7 +271,7 @@ static u32 ds_mul_u32_q15_sat(u32 value, u32 mul_q15)
 
 static u32 ds_pitch_ratio(s32 track)
 {
-    static const u16 semitone_q15[13] = {
+    static const u32 semitone_q15[13] = {
         32768, 34716, 36781, 38968, 41285, 43740, 46341,
         49097, 52016, 55109, 58386, 61858, 65536
     };

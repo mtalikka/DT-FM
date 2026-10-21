@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         binutils-m68k-linux-gnu \
+        build-essential \
         ca-certificates \
         gcc-m68k-linux-gnu \
         git \
@@ -21,3 +22,5 @@ RUN git clone --depth 1 --branch "$ELEKLOADER_REF" https://github.com/irpina/ele
     && /opt/venv/bin/pip install --no-cache-dir /opt/elekloader
 
 WORKDIR /workspace
+
+COPY . /workspace

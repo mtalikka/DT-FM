@@ -1,0 +1,33 @@
+name: Build checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build test image
+        run: docker build --tag dt-fm-builder .
+
+      - name: Run DSP tests
+        run: >-
+          docker run --rm
+          --workdir /workspace
+          dt-fm-builder make test
+
+      - name: Cross-compile for ColdFire
+        run: >-
+          docker run --rm
+          --workdir /workspace
+          --env CROSS=m68k-linux-gnu-
+          --env ELEKLOADER=/opt/elekloader
+          dt-fm-builder make cross-check
