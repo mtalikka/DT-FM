@@ -104,11 +104,6 @@ Operator 4 also has feedback, set by CHAR; the diagrams do not draw it.
 
 ## Install: no compiler required
 
-**Install 1.1.0 for now.** 1.2.0 is on the releases page as a preview, but
-elekloader can't build it yet: it needs core 3.0 and machine-pages 1.1,
-which are in elekloader's source but in no elekloader release. The app and
-the web page refuse 1.2.0 until one has them.
-
 You need only the prebuilt DT-FM mod for your OS, `dt-fm-1.2.1-os1.53.elemod`
 or `dt-fm-1.2.1-os1.54.elemod` from the
 [1.2.1 release](https://github.com/mtalikka/DT-FM/releases/tag/v1.2.1),
