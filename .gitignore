@@ -5,7 +5,6 @@ __pycache__/
 
 # Generated mods, firmware, maps, probes and test executables.
 out/
-diagnostics/digihealth/out/
 *.elemod
 *.syx
 *.bin

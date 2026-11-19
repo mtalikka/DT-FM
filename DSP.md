@@ -57,8 +57,10 @@ without changing a parameter value.
 envelope sleep. `make cross-check` compiles the C and glue
 for the MCF54455. The elekloader build checks the mod against the user's
 stock OS and verifies the patched firmware. Those checks do not measure
-hardware CPU use. The optional digihealth mod shows live CPU/DSP load and
-FAST AUDIO in SETTINGS, and `tests/timing_probe.py` can measure an emulated
+hardware CPU use. The separate digihealth mod shows live CPU/DSP load and
+FAST AUDIO in SETTINGS. Digihealth is not bundled with DT-FM, but enabling
+its latest FAST AUDIO implementation is strongly recommended for practical
+multi-track DT-FM use. `tests/timing_probe.py` can measure an emulated
 render path where a compatible digiemu runtime is available.
 
 Do not transplant RingTone's Digitone-specific EMAC, Core B, DMA-buffer or

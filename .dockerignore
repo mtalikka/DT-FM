@@ -1,6 +1,5 @@
 .git
 firmware/
 out/
-diagnostics/digihealth/out/
 *.syx
 **/*.syx

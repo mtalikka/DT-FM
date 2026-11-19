@@ -23,13 +23,3 @@ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
 ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-## digihealth
-
-`diagnostics/digihealth/` is a locally modified copy of
-[irpina/digihealth](https://github.com/irpina/digihealth), commit
-`72f0183383e67c3313146bf77df6f71dd7996a8f`, with its OS 1.54 port (`6d2a956`)
-applied. It is
-GPL-2.0-or-later, not MIT. Its full license is retained at
-`diagnostics/digihealth/LICENSE`. The local change makes FAST AUDIO opt-in
-instead of enabling it at boot. Its source is included so that the exact
-diagnostic configuration used during hardware testing is reproducible.

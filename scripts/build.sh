@@ -31,16 +31,11 @@ case "$os" in
     *) echo "Expected a Digitakt mk1 OS 1.53 or 1.54 file, not $os." >&2; exit 2 ;;
 esac
 dtfm="$project/out/dt-fm-$dtfm_version-os$os.elemod"
-health="$project/diagnostics/digihealth/out/digihealth-1.0.1-os$os.elemod"
 
 cd "$loader"
 "$python" -m elekloader.sdk.build mods/core --stock "$stock"
 "$python" -m elekloader.sdk.build mods/machine-pages --stock "$stock"
 "$python" -m elekloader.sdk.build "$project/src" --stock "$stock" --out "$project/out"
-(
-    cd "$project/diagnostics/digihealth"
-    PYTHONPATH="$loader${PYTHONPATH:+:$PYTHONPATH}" "$python" build.py --stock "$stock"
-)
 
 # Select the newest artifact for this OS. The core and machine-pages versions
 # advance independently, and both remain compatible with DT-FM's core-3.0 API.
@@ -63,10 +58,9 @@ fi
 # elekloader adds -os<version> only for a port's OS; name 1.53's files alike.
 if [ -z "$suffix" ]; then
     mv -f "$project/out/dt-fm-$dtfm_version.elemod" "$dtfm"
-    mv -f "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" "$health"
 fi
 
-"$python" -m elekloader.lint --stock "$stock" "$core" "$pages" "$health" "$dtfm"
+"$python" -m elekloader.lint --stock "$stock" "$core" "$pages" "$dtfm"
 "$python" -m elekloader.patch --stock "$stock" \
-    --mod "$core" --mod "$pages" --mod "$health" --mod "$dtfm" \
+    --mod "$core" --mod "$pages" --mod "$dtfm" \
     --out "$project/out/Digitakt_OS${os}_DT-FM_S034.syx" --version S034

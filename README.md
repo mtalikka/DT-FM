@@ -26,7 +26,9 @@ The source, not a modified Elektron OS, is what this repository distributes.
 
 In hardware testing, four DT-FM tracks playing together used about 95% CPU
 without FAST AUDIO and about 85% with it. Eight-track operation is **not**
-claimed.
+claimed. DT-FM therefore needs digihealth's FAST AUDIO for practical
+multi-track use, even though they are separate mods and digihealth is not
+bundled with DT-FM.
 
 ## AI Disclaimer
 
@@ -122,7 +124,11 @@ You do not need ColdFire tools, Python, or a source checkout to install it.
    Enable DT-FM. elekloader's current Digitakt **core** should enable with it.
    If your elekloader has an older core or shows a dependency error, update
    elekloader before building.
-3. Optional but highly recommended: install and enable the bundled digihealth diagnostic for your OS too. This adds the FAST AUDIO feature available from the settings menu. Enabling this allows several DT-FM tracks to play simultaneously without freezing the Digitakt. 
+3. Digihealth is not bundled with DT-FM. Install the latest digihealth mod
+   separately for your OS from the elekloader mod shop, then enable
+   **FAST AUDIO** in SETTINGS. DT-FM also works without it, but in testing
+   it is practically limited to fewer simultaneous voices; it is strongly
+   recommended for normal use.
 4. Wait for elekloader's **Ready to build** check, then choose **Build Firmware**.
    Save the generated `.syx` on your computer.
 6. Send that `.syx` to the Digitakt with Elektron Transfer
@@ -146,14 +152,13 @@ ELEKLOADER_CROSS=m68k-elf- sh scripts/build.sh \
   firmware/Digitakt_OS1.54.syx /path/to/elekloader
 ```
 
-This builds the current Digitakt core, machine-pages, DT-FM and the optional diagnostic
+This builds the current Digitakt core, machine-pages and DT-FM
 from source for the OS of the file you give it, lints the combination, and
 writes the verified custom OS to `out/Digitakt_OS1.54_DT-FM_S034.syx`. Your
 elekloader checkout must contain the current `mods/core` and
 `mods/machine-pages` sources. The script selects the newest artifacts matching
-the stock OS, so it remains usable as those mods advance. The mods are
-named for the OS too: `out/dt-fm-1.2.1-os1.54.elemod` and
-`diagnostics/digihealth/out/digihealth-1.0.1-os1.54.elemod` (`1.53` for a
+the stock OS, so it remains usable as those mods advance. The DT-FM mod is
+named for the OS too: `out/dt-fm-1.2.1-os1.54.elemod` (`1.53` for a
 1.53 file). To test DSP alone, run `make test`;
 `make cross-check` additionally compiles for ColdFire. Optional emulator
 probes in `tests/` require [digiemu](https://github.com/irpina/digiemu).
@@ -166,16 +171,16 @@ and is not included in the image:
 .\scripts\docker-build.ps1 .\firmware\Digitakt_OS1.54.syx
 ```
 
-The verified custom OS and `.elemod` files are written under `out/` and
-`diagnostics/digihealth/out/` in this checkout. Docker must be running.
+The verified custom OS and `.elemod` files are written under `out/` in this
+checkout. Docker must be running.
 
 ## Use and recovery
 
 This changes firmware on the instrument. Back up projects and sounds first,
 check that your stock OS is OS 1.53 or 1.54 for the *original* Digitakt, and keep
-that stock file for recovery. If you install the optional diagnostic,
-FAST AUDIO is off by default; SYSTEM INFO and FAST AUDIO can be enabled
-separately in SETTINGS. See [diagnostics](diagnostics/README.md) for the monitor.
+that stock file for recovery. digihealth is an independent but strongly
+recommended companion mod. Install the latest digihealth release separately
+and enable FAST AUDIO in SETTINGS for normal multi-track DT-FM use.
 
 DT-FM is independent of, and not endorsed by, Elektron. It contains no
 Elektron firmware or samples.
@@ -187,22 +192,16 @@ Elektron firmware or samples.
 | `src/` | The mod: `mod.json` (manifest and patch sites), `digitakt.c` (the machine: its page, render and operators), `glue.s` (the hooks that store the hidden operators), `sophie.c` and `sophie.h` (the FM engine; the names predate DT-FM) |
 | `tests/` | The host DSP test `make test` runs, a waveform probe and emulator probes |
 | `scripts/build.sh` | Builds, lints and patches everything for one stock OS |
-| `diagnostics/` | The optional digihealth diagnostic's source and notes |
-| `release/` | Prebuilt digihealth for each OS |
 | `firmware/`, `out/` | Your stock OS files and the build output, both ignored by git |
 
 The Digitakt addresses DT-FM uses are kept apart from the code that uses
 them: `src/os153.inc` / `src/os154.inc` for `glue.s`, `src/os153.h` /
 `src/os154.h` for `digitakt.c`. The OS 1.54 build defines `OS154`
 (`src/mod.json`, under `ports`), which picks the 1.54 files and patch
-sites. The bundled digihealth is split the same way.
-
 ## Source and licenses
 
 The DT-FM implementation is [MIT licensed](LICENSE). Third-party attribution
-and the separate GPL-2.0-or-later digihealth source are
-documented in [THIRD_PARTY.md](THIRD_PARTY.md). The digihealth license is
-also included in its source directory.
+is documented in [THIRD_PARTY.md](THIRD_PARTY.md).
 
 The [DSP reference](DSP.md) records the parts of the stock OS that DT-FM
 uses and the renderer's design.
