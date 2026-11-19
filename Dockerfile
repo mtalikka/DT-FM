@@ -15,7 +15,7 @@ RUN apt-get update \
         python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-ARG ELEKLOADER_REF=kit-v0.5.0
+ARG ELEKLOADER_REF=main
 
 RUN git clone --depth 1 --branch "$ELEKLOADER_REF" https://github.com/irpina/elekloader.git /opt/elekloader \
     && python3 -m venv /opt/venv \

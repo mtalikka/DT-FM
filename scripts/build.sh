@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build the S034 DT-FM release without redistributing firmware. The elekloader
-# checkout must have core 3.0 and machine-pages 1.1 (mods/core, mods/machine-pages).
+# checkout must contain the current Digitakt core and machine-pages mods.
 set -eu
 
 if [ "$#" -ne 2 ]; then
@@ -26,12 +26,10 @@ from elekloader import devices, syx
 dev, rel = devices.identify(syx.Syx.load(sys.argv[1]).sha256)
 print(rel.version if dev.key == "digitakt-mk1" else dev.key)' "$stock")
 case "$os" in
-    1.53) port="" ;;
-    1.54) port="-os1.54" ;;
+    1.53) suffix="" ;;
+    1.54) suffix="-os1.54" ;;
     *) echo "Expected a Digitakt mk1 OS 1.53 or 1.54 file, not $os." >&2; exit 2 ;;
 esac
-core="$loader/mods/core/out/core-3.0$port.elemod"
-pages="$loader/mods/machine-pages/out/machine-pages-1.1$port.elemod"
 dtfm="$project/out/dt-fm-$dtfm_version-os$os.elemod"
 health="$project/diagnostics/digihealth/out/digihealth-1.0.1-os$os.elemod"
 
@@ -43,8 +41,27 @@ cd "$loader"
     cd "$project/diagnostics/digihealth"
     PYTHONPATH="$loader${PYTHONPATH:+:$PYTHONPATH}" "$python" build.py --stock "$stock"
 )
+
+# Select the newest artifact for this OS. The core and machine-pages versions
+# advance independently, and both remain compatible with DT-FM's core-3.0 API.
+newest() {
+    files=$(find "$1" -maxdepth 1 -type f -name '*.elemod' | sort -V)
+    if [ -n "$suffix" ]; then
+        printf '%s\n' "$files" | grep -- "$suffix\\.elemod\$" | tail -1
+    else
+        printf '%s\n' "$files" | grep -v -- '-os' | tail -1
+    fi
+}
+
+core=$(newest "$loader/mods/core/out")
+pages=$(newest "$loader/mods/machine-pages/out")
+if [ -z "$core" ] || [ -z "$pages" ]; then
+    echo "Could not find OS-matching core or machine-pages artifacts." >&2
+    exit 2
+fi
+
 # elekloader adds -os<version> only for a port's OS; name 1.53's files alike.
-if [ "$os" = 1.53 ]; then
+if [ -z "$suffix" ]; then
     mv -f "$project/out/dt-fm-$dtfm_version.elemod" "$dtfm"
     mv -f "$project/diagnostics/digihealth/out/digihealth-1.0.1.elemod" "$health"
 fi
